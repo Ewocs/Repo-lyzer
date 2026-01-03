@@ -38,36 +38,26 @@ func NewAnalyzerDataBridge(result AnalysisResult) *AnalyzerDataBridge {
 // GetHealthMetrics returns health-related metrics
 func (b *AnalyzerDataBridge) GetHealthMetrics() map[string]interface{} {
 	return map[string]interface{}{
-		"health_score":    b.healthScore,
-		"health_status":   b.getHealthStatus(),
-		"bus_factor":      b.busFactor,
-		"bus_risk":        b.busRisk,
-		"maturity_level":  b.maturityLevel,
-		"maturity_score":  b.maturityScore,
-		"health_color":    b.getHealthColor(),
-		"risk_color":      b.getRiskColor(),
+		"health_score":   b.healthScore,
+		"health_status":  b.getHealthStatus(),
+		"bus_factor":     b.busFactor,
+		"bus_risk":       b.busRisk,
+		"maturity_level": b.maturityLevel,
+		"maturity_score": b.maturityScore,
+		"health_color":   b.getHealthColor(),
+		"risk_color":     b.getRiskColor(),
 	}
 }
 
 // GetRepositoryInfo returns repository metadata
 func (b *AnalyzerDataBridge) GetRepositoryInfo() map[string]interface{} {
 	return map[string]interface{}{
-		"name":             b.repo.FullName,
-		"url":              b.repo.HTMLURL,
-		"description":      b.repo.Description,
-		"stars":            b.repo.StargazersCount,
-		"forks":            b.repo.ForksCount,
-		"open_issues":      b.repo.OpenIssuesCount,
-		"watchers":         b.repo.WatchersCount,
-		"language":         b.repo.Language,
-		"created_at":       b.repo.CreatedAt,
-		"updated_at":       b.repo.UpdatedAt,
-		"pushed_at":        b.repo.PushedAt,
-		"is_fork":          b.repo.Fork,
-		"is_archived":      b.repo.Archived,
-		"is_private":       b.repo.Private,
-		"default_branch":   b.repo.DefaultBranch,
-		"clone_url":        b.repo.CloneURL,
+		"name":           b.repo.FullName,
+		"description":    b.repo.Description,
+		"stars":          b.repo.Stars,
+		"forks":          b.repo.Forks,
+		"open_issues":    b.repo.OpenIssues,
+		"default_branch": b.repo.DefaultBranch,
 	}
 }
 
@@ -88,21 +78,21 @@ func (b *AnalyzerDataBridge) GetCommitMetrics() map[string]interface{} {
 	recentActivity := b.getRecentActivity()
 
 	return map[string]interface{}{
-		"total_commits":      len(b.commits),
-		"commits_per_day":    commitActivity,
-		"recent_activity":    recentActivity,
-		"commit_frequency":   b.calculateCommitFrequency(),
-		"last_commit":        b.getLastCommitInfo(),
-		"activity_trend":     b.calculateActivityTrend(),
+		"total_commits":    len(b.commits),
+		"commits_per_day":  commitActivity,
+		"recent_activity":  recentActivity,
+		"commit_frequency": b.calculateCommitFrequency(),
+		"last_commit":      b.getLastCommitInfo(),
+		"activity_trend":   b.calculateActivityTrend(),
 	}
 }
 
 // GetLanguageMetrics returns programming language information
 func (b *AnalyzerDataBridge) GetLanguageMetrics() map[string]interface{} {
 	return map[string]interface{}{
-		"languages":       b.languages,
-		"primary_language": b.getPrimaryLanguage(),
-		"language_count":   len(b.languages),
+		"languages":          b.languages,
+		"primary_language":   b.getPrimaryLanguage(),
+		"language_count":     len(b.languages),
 		"language_diversity": b.calculateLanguageDiversity(),
 	}
 }
@@ -165,9 +155,8 @@ func (b *AnalyzerDataBridge) getTopContributors(count int) []map[string]interfac
 	for i := 0; i < count; i++ {
 		contrib := b.contributors[i]
 		top = append(top, map[string]interface{}{
-			"login":       contrib.Login,
-			"contributions": contrib.Contributions,
-			"avatar_url":  contrib.AvatarURL,
+			"login":         contrib.Login,
+			"contributions": contrib.Commits,
 		})
 	}
 	return top
@@ -180,13 +169,13 @@ func (b *AnalyzerDataBridge) calculateDiversity() float64 {
 
 	var sum int
 	for _, contrib := range b.contributors {
-		sum += contrib.Contributions
+		sum += contrib.Commits
 	}
 
 	// Calculate Herfindahl index (diversity measure)
 	var diversity float64
 	for _, contrib := range b.contributors {
-		ratio := float64(contrib.Contributions) / float64(sum)
+		ratio := float64(contrib.Commits) / float64(sum)
 		diversity += ratio * ratio
 	}
 
@@ -230,8 +219,8 @@ func (b *AnalyzerDataBridge) getLastCommitInfo() map[string]interface{} {
 	lastCommit := b.commits[len(b.commits)-1]
 	return map[string]interface{}{
 		"sha":    lastCommit.SHA,
-		"author": lastCommit.Author,
-		"date":   lastCommit.Date,
+		"author": lastCommit.Commit.Author,
+		"date":   lastCommit.Commit.Author.Date,
 	}
 }
 
@@ -245,10 +234,7 @@ func (b *AnalyzerDataBridge) calculateActivityTrend() string {
 }
 
 func (b *AnalyzerDataBridge) getPrimaryLanguage() string {
-	if b.repo.Language != "" {
-		return b.repo.Language
-	}
-
+	// Language field not available in Repo struct, use languages map instead
 	maxBytes := 0
 	primaryLang := "Unknown"
 	for lang, bytes := range b.languages {

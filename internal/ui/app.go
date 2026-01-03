@@ -21,20 +21,16 @@ const (
 )
 
 type MainModel struct {
-	state         sessionState
-	menu          EnhancedMenuModel
-	input         string // Repository input
-	spinner       spinner.Model
-	dashboard     DashboardModel
-	settings      SettingsModel
-	help          HelpModel
-	history       HistoryModel
-	progress      *ProgressTracker
-	err           error
-	windowWidth   int
-	windowHeight  int
-	analysisType  string // quick, detailed, custom
-	appSettings   AppSettings
+	state        sessionState
+	menu         MenuModel
+	input        string // Repository input
+	spinner      spinner.Model
+	dashboard    DashboardModel
+	progress     *ProgressTracker
+	err          error
+	windowWidth  int
+	windowHeight int
+	analysisType string // quick, detailed, custom
 }
 
 func NewMainModel() MainModel {
