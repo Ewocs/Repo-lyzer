@@ -6,8 +6,9 @@ import (
 
 	"github.com/agnivo988/Repo-lyzer/internal/analyzer"
 	"github.com/agnivo988/Repo-lyzer/internal/github"
+	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/spinner"
-	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -27,20 +28,18 @@ const (
 
 type MainModel struct {
 	state         sessionState
-	menu          EnhancedMenuModel
+	menu          MenuModel
 	input         string // Repository input
 	spinner       spinner.Model
 	dashboard     DashboardModel
 	tree          TreeModel
-	settings      SettingsModel
-	help          HelpModel
-	history       HistoryModel
+	help          help.Model
 	progress      *ProgressTracker
 	err           error
 	windowWidth   int
 	windowHeight  int
 	analysisType  string // quick, detailed, custom
-	appSettings   AppSettings
+	appSettings    tea.LogOptionsSetter
 }
 
 func NewMainModel() MainModel {
@@ -54,9 +53,10 @@ func NewMainModel() MainModel {
 		spinner:      s,
 		dashboard:    NewDashboardModel(),
 		tree:         NewTreeModel(nil),
-		appSettings:  appSettings,
+		appSettings:  nil, 
 	}
 }
+
 
 func (m MainModel) Init() tea.Cmd {
 	return m.spinner.Tick
@@ -73,9 +73,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Propagate to children
 		m.menu.Update(msg)
 		m.dashboard.Update(msg)
-		m.settings.Update(msg)
 		m.help.Update(msg)
-		m.history.Update(msg)
 		newTree, _ := m.tree.Update(msg)
 		m.tree = newTree.(TreeModel)
 
