@@ -9,17 +9,38 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+type ExportMenuOption int
+
+const (
+	ExportJSON ExportMenuOption = iota
+	ExportMarkdown
+	ExportCSV
+	ExportHTML
+	ExportCancel
+)
+
 type DashboardModel struct {
-	data       AnalysisResult
-	BackToMenu bool
-	width      int
-	height     int
-	showExport bool
-	statusMsg  string
+	data              AnalysisResult
+	BackToMenu        bool
+	width             int
+	height            int
+	showExport        bool
+	statusMsg         string
+	exportCursor      int
+	exportOptions     []string
+	exportMenuVisible bool
 }
 
 func NewDashboardModel() DashboardModel {
-	return DashboardModel{}
+	return DashboardModel{
+		exportOptions: []string{
+			"💾 Export as JSON",
+			"📄 Export as Markdown",
+			"📊 Export as CSV",
+			"🌐 Export as HTML",
+			"❌ Cancel",
+		},
+	}
 }
 
 func (m *DashboardModel) SetData(data AnalysisResult) {
@@ -52,30 +73,58 @@ func (m DashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "esc", "q":
-			if m.showExport {
-				m.showExport = false
-			} else {
+		if m.exportMenuVisible {
+			switch msg.String() {
+			case "up", "k":
+				if m.exportCursor > 0 {
+					m.exportCursor--
+				}
+			case "down", "j":
+				if m.exportCursor < len(m.exportOptions)-1 {
+					m.exportCursor++
+				}
+			case "enter":
+				return m.handleExportSelection()
+			case "esc":
+				m.exportMenuVisible = false
+			}
+		} else {
+			switch msg.String() {
+			case "esc", "q":
 				m.BackToMenu = true
-			}
-		case "e":
-			m.showExport = !m.showExport
-		case "j":
-			if m.showExport {
-				return m, func() tea.Msg {
-					err := ExportJSON(m.data, "analysis.json")
-					return exportMsg{err, "Exported to analysis.json"}
-				}
-			}
-		case "m":
-			if m.showExport {
-				return m, func() tea.Msg {
-					err := ExportMarkdown(m.data, "analysis.md")
-					return exportMsg{err, "Exported to analysis.md"}
-				}
+			case "e":
+				m.exportMenuVisible = !m.exportMenuVisible
+				m.exportCursor = 0
 			}
 		}
+	}
+	return m, nil
+}
+
+func (m *DashboardModel) handleExportSelection() (tea.Model, tea.Cmd) {
+	switch m.exportCursor {
+	case 0: // JSON
+		return m, func() tea.Msg {
+			err := ExportJSON(m.data, "analysis.json")
+			return exportMsg{err, "✅ Exported to analysis.json"}
+		}
+	case 1: // Markdown
+		return m, func() tea.Msg {
+			err := ExportMarkdown(m.data, "analysis.md")
+			return exportMsg{err, "✅ Exported to analysis.md"}
+		}
+	case 2: // CSV
+		return m, func() tea.Msg {
+			err := ExportCSV(m.data, "analysis.csv")
+			return exportMsg{err, "✅ Exported to analysis.csv"}
+		}
+	case 3: // HTML
+		return m, func() tea.Msg {
+			err := ExportHTML(m.data, "analysis.html")
+			return exportMsg{err, "✅ Exported to analysis.html"}
+		}
+	case 4: // Cancel
+		m.exportMenuVisible = false
 	}
 	return m, nil
 }
@@ -86,11 +135,20 @@ func (m DashboardModel) View() string {
 	}
 
 	// Header
-	header := TitleStyle.Render(fmt.Sprintf("Analysis for %s", m.data.Repo.FullName))
+	header := TitleStyle.Render(fmt.Sprintf("📊 Analysis for %s", m.data.Repo.FullName))
+
+	// Repository Info
+	repoInfo := fmt.Sprintf(
+		"Stars: %d  •  Forks: %d  •  Contributors: %d  •  Commits: %d",
+		m.data.Repo.StargazersCount,
+		m.data.Repo.ForksCount,
+		len(m.data.Contributors),
+		len(m.data.Commits),
+	)
 
 	// Metrics Column
 	metrics := fmt.Sprintf(
-		"Health Score: %d\nBus Factor: %d (%s)\nMaturity: %s (%d)",
+		"🏥 Health Score: %d/100\n🚌 Bus Factor: %d (%s)\n📈 Maturity: %s (Score: %d)",
 		m.data.HealthScore,
 		m.data.BusFactor, m.data.BusRisk,
 		m.data.MaturityLevel, m.data.MaturityScore,
@@ -104,20 +162,45 @@ func (m DashboardModel) View() string {
 
 	// Layout
 	content := lipgloss.JoinHorizontal(lipgloss.Top, metricsBox, chartBox)
-	content = lipgloss.JoinVertical(lipgloss.Left, header, content)
+	content = lipgloss.JoinVertical(lipgloss.Left, header, SubtleStyle.Render(repoInfo), content)
 
-	if m.showExport {
-		exportMenu := BoxStyle.Render("Export Options:\n[J] JSON\n[M] Markdown")
-		content = lipgloss.JoinVertical(lipgloss.Left, content, exportMenu)
+	if m.exportMenuVisible {
+		exportMenu := "📥 EXPORT OPTIONS:\n\n"
+		for i, opt := range m.exportOptions {
+			cursor := "  "
+			style := NormalStyle
+			if m.exportCursor == i {
+				cursor = "▶ "
+				style = SelectedStyle
+			}
+			exportMenu += fmt.Sprintf("%s%s\n", cursor, style.Render(opt))
+		}
+		exportBox := BoxStyle.Render(exportMenu)
+		content = lipgloss.JoinVertical(lipgloss.Left, content, exportBox)
 	}
 
 	if m.statusMsg != "" {
-		content = lipgloss.JoinVertical(lipgloss.Left, content, lipgloss.NewStyle().Foreground(lipgloss.Color("205")).Render(m.statusMsg))
+		content = lipgloss.JoinVertical(lipgloss.Left, content, SuccessStyle.Render(m.statusMsg))
 	}
 
-	content += "\n" + SubtleStyle.Render("e: export • q: back")
+	footer := SubtleStyle.Render("e: export")
+	if !m.exportMenuVisible {
+		footer += SubtleStyle.Render(" • q: back")
+	} else {
+		footer += SubtleStyle.Render(" • ↑ ↓ select • Enter confirm • ESC close")
+	}
+	content += "\n" + footer
 
 	if m.width == 0 {
+		return BoxStyle.Render(content)
+	}
+
+	return lipgloss.Place(
+		m.width, m.height,
+		lipgloss.Center, lipgloss.Center,
+		BoxStyle.Render(content),
+	)
+}
 		return content
 	}
 
