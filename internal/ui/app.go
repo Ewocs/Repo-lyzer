@@ -15,7 +15,6 @@ type sessionState int
 
 const (
 	stateMenu sessionState = iota
-	stateAnalysisMenu
 	stateInput
 	stateLoading
 	stateDashboard
@@ -48,8 +47,6 @@ func NewMainModel() MainModel {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
-
-	appSettings, _ := LoadSettings()
 
 	return MainModel{
 		state:        stateMenu,
@@ -110,20 +107,14 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch m.state {
 	case stateMenu:
 		newMenu, newCmd := m.menu.Update(msg)
-		m.menu = newMenu.(EnhancedMenuModel)
+		m.menu = newMenu.(MenuModel)
 		cmds = append(cmds, newCmd)
 
-		if m.menu.Done {
-			m.handleMainMenuSelection()
-		}
-
-	case stateAnalysisMenu:
-		newMenu, newCmd := m.menu.Update(msg)
-		m.menu = newMenu.(EnhancedMenuModel)
-		cmds = append(cmds, newCmd)
-
-		if m.menu.Done {
-			m.handleAnalysisSelection()
+		if m.menu.SelectedOption == 0 && m.menu.Done { // Analyze
+			m.state = stateInput
+			m.menu.Done = false // Reset for back navigation
+		} else if m.menu.SelectedOption == 2 && m.menu.Done { // Exit
+			return m, tea.Quit
 		}
 
 	case stateInput:
@@ -143,8 +134,6 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.input += string(msg.Runes)
 			case tea.KeyEsc:
 				m.state = stateMenu
-				m.menu.Done = false
-				m.input = ""
 			}
 		}
 
@@ -171,14 +160,11 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case stateLoading:
-		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(msg)
 		cmds = append(cmds, cmd)
 
 		if result, ok := msg.(AnalysisResult); ok {
 			m.dashboard.SetData(result)
-			// Add to history
-			AddToHistory(result, "")
 			m.state = stateDashboard
 			m.progress = nil
 		}
@@ -197,108 +183,17 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.state = stateMenu
 			m.dashboard.BackToMenu = false
 			m.input = ""
-			m.err = nil
-			m.menu = NewMenuModel()
-		}
-
-	case stateTree:
-		newTree, newCmd := m.tree.Update(msg)
-		m.tree = newTree.(TreeModel)
-		cmds = append(cmds, newCmd)
-
-		if m.tree.Done {
-			m.state = stateDashboard
-			m.tree.Done = false
-		}
-
-	case stateSettings:
-		newSettings, newCmd := m.settings.Update(msg)
-		m.settings = newSettings.(SettingsModel)
-		cmds = append(cmds, newCmd)
-
-		if msg, ok := msg.(tea.KeyMsg); ok && msg.String() == "esc" {
-			m.state = stateMenu
-			m.menu.Done = false
-			m.menu = NewMenuModel()
-		}
-
-	case stateHelp:
-		newHelp, newCmd := m.help.Update(msg)
-		m.help = newHelp.(HelpModel)
-		cmds = append(cmds, newCmd)
-
-		if m.help.Done {
-			m.state = stateMenu
-			m.help.Done = false
-			m.menu.Done = false
-			m.menu = NewMenuModel()
-		}
-
-	case stateHistory:
-		newHistory, newCmd := m.history.Update(msg)
-		m.history = newHistory.(HistoryModel)
-		cmds = append(cmds, newCmd)
-
-		if m.history.Done {
-			if m.history.selected != "" {
-				m.input = m.history.selected
-				m.state = stateLoading
-				cmds = append(cmds, m.analyzeRepo(m.input))
-			} else {
-				m.state = stateMenu
-				m.menu.Done = false
-				m.menu = NewMenuModel()
-			}
 		}
 	}
 
 	return m, tea.Batch(cmds...)
 }
 
-func (m *MainModel) handleMainMenuSelection() {
-	switch m.menu.SelectedVal {
-	case "compare":
-		m.state = stateCompareInput
-		m.input = ""
-		m.menu.Done = false
-	case "recent":
-		m.state = stateHistory
-		m.history = NewHistoryModel()
-		m.menu.Done = false
-	case "exit":
-		m.state = stateMenu
-	}
-}
-
-func (m *MainModel) handleAnalysisSelection() {
-	switch m.menu.SelectedVal {
-	case "quick_analyze":
-		m.analysisType = "quick"
-		m.state = stateInput
-		m.input = ""
-		m.menu.Done = false
-	case "detailed_analyze":
-		m.analysisType = "detailed"
-		m.state = stateInput
-		m.input = ""
-		m.menu.Done = false
-	case "custom_analyze":
-		m.analysisType = "custom"
-		m.state = stateInput
-		m.input = ""
-		m.menu.Done = false
-	default:
-		m.state = stateMenu
-		m.menu = NewMenuModel()
-		m.menu.Done = false
-	}
-}
-
 func (m MainModel) View() string {
 	switch m.state {
 	case stateMenu:
 		return m.menu.View()
-	case stateInput, stateCompareInput:
+	case stateInput:
 		return m.inputView()
 	case stateLoading:
 		loadMsg := fmt.Sprintf("📊 Analyzing %s", m.input)
@@ -336,32 +231,18 @@ func (m MainModel) View() string {
 		)
 	case stateDashboard:
 		return m.dashboard.View()
-	case stateSettings:
-		return m.settings.View()
-	case stateHelp:
-		return m.help.View()
-	case stateHistory:
-		return m.history.View()
-	case stateTree:
-		return m.tree.View()
 	}
 	return ""
 }
 
 func (m MainModel) inputView() string {
-	title := "📥 ENTER REPOSITORY"
-	if m.state == stateCompareInput {
-		title = "🔄 COMPARE REPOSITORIES"
-	}
-
 	inputContent :=
-		TitleStyle.Render(title) + "\n\n" +
+		TitleStyle.Render("📥 ENTER REPOSITORY") + "\n\n" +
 			InputStyle.Render("> "+m.input) + "\n\n" +
 			SubtleStyle.Render("Format: owner/repo  •  Press Enter to run")
 
 	if m.err != nil {
-		inputContent += "\n\n" + ErrorStyle.Render(fmt.Sprintf("❌ Error: %v", m.err))
-		inputContent += "\n" + SubtleStyle.Render("💡 Tip: Check repository name and your GitHub token in Settings")
+		inputContent += "\n\n" + ErrorStyle.Render(fmt.Sprintf("Error: %v", m.err))
 	}
 
 	box := BoxStyle.Render(inputContent)
@@ -383,7 +264,7 @@ func (m MainModel) analyzeRepo(repoName string) tea.Cmd {
 	return func() tea.Msg {
 		parts := strings.Split(repoName, "/")
 		if len(parts) != 2 {
-			return fmt.Errorf("invalid format. Use: owner/repo (e.g., golang/go)")
+			return fmt.Errorf("repository must be in owner/repo format")
 		}
 
 		tracker := NewProgressTracker()
@@ -392,7 +273,7 @@ func (m MainModel) analyzeRepo(repoName string) tea.Cmd {
 		client := github.NewClient()
 		repo, err := client.GetRepo(parts[0], parts[1])
 		if err != nil {
-			return fmt.Errorf("failed to fetch repository: %w", err)
+			return err
 		}
 		tracker.NextStage()
 
@@ -406,6 +287,7 @@ func (m MainModel) analyzeRepo(repoName string) tea.Cmd {
 
 		// Stage 4: Analyze languages
 		languages, _ := client.GetLanguages(parts[0], parts[1])
+		fileTree, _ := client.GetFileTree(parts[0], parts[1], repo.DefaultBranch)
 		tracker.NextStage()
 
 		// Stage 5: Compute metrics
@@ -421,6 +303,7 @@ func (m MainModel) analyzeRepo(repoName string) tea.Cmd {
 			Repo:          repo,
 			Commits:       commits,
 			Contributors:  contributors,
+			FileTree:      fileTree,
 			Languages:     languages,
 			HealthScore:   score,
 			BusFactor:     busFactor,
