@@ -70,12 +70,16 @@ func (m DashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return exportMsg{err, "Exported to analysis.json"}
 				}
 			}
-		case "m":
-			if m.showExport {
-				return m, func() tea.Msg {
-					err := ExportMarkdown(m.data, "analysis.md")
-					return exportMsg{err, "Exported to analysis.md"}
-				}
+		} else {
+			switch msg.String() {
+			case "esc", "q":
+				m.BackToMenu = true
+			case "e":
+				m.exportMenuVisible = !m.exportMenuVisible
+				m.exportCursor = 0
+			case "f":
+				// Switch to tree view - handled in app.go
+				return m, func() tea.Msg { return "switch_to_tree" }()
 			}
 		}
 	}
@@ -104,16 +108,40 @@ func (m DashboardModel) View() string {
 	chart := RenderCommitActivity(activityData, 10) // Show last 10 days
 	chartBox := BoxStyle.Render(chart)
 
-	// File Tree (Simplified)
-	treeContent := "📂 Files (Top 10):\n"
-	limit := 10
-	if len(m.data.FileTree) < limit {
-		limit = len(m.data.FileTree)
+	// Languages
+	langs := "Languages:\n"
+	for l, b := range m.data.Languages {
+		langs += fmt.Sprintf("• %s (%d bytes)\n", l, b)
+	}
+	langBox := BoxStyle.Render(langs)
+
+	// Top Contributors
+	contribs := "Top Contributors:\n"
+	limit := 5
+	if len(m.data.Contributors) < 5 {
+		limit = len(m.data.Contributors)
 	}
 	for i := 0; i < limit; i++ {
-		icon := "📄"
-		if m.data.FileTree[i].Type == "tree" {
-			icon = "📁"
+		c := m.data.Contributors[i]
+		contribs += fmt.Sprintf("• %s (%d)\n", c.Login, c.Contributions)
+	}
+	contribBox := BoxStyle.Render(contribs)
+
+	// Layout
+	row1 := lipgloss.JoinHorizontal(lipgloss.Top, metricsBox, chartBox)
+	row2 := lipgloss.JoinHorizontal(lipgloss.Top, langBox, contribBox)
+	content := lipgloss.JoinVertical(lipgloss.Left, header, SubtleStyle.Render(repoInfo), row1, row2)
+
+	if m.exportMenuVisible {
+		exportMenu := "📥 EXPORT OPTIONS:\n\n"
+		for i, opt := range m.exportOptions {
+			cursor := "  "
+			style := NormalStyle
+			if m.exportCursor == i {
+				cursor = "▶ "
+				style = SelectedStyle
+			}
+			exportMenu += fmt.Sprintf("%s%s\n", cursor, style.Render(opt))
 		}
 		treeContent += fmt.Sprintf("%s %s\n", icon, m.data.FileTree[i].Path)
 	}
@@ -131,8 +159,11 @@ func (m DashboardModel) View() string {
 		content = lipgloss.JoinVertical(lipgloss.Left, content, exportMenu)
 	}
 
-	if m.statusMsg != "" {
-		content = lipgloss.JoinVertical(lipgloss.Left, content, lipgloss.NewStyle().Foreground(lipgloss.Color("205")).Render(m.statusMsg))
+	footer := SubtleStyle.Render("e: export • f: file tree")
+	if !m.exportMenuVisible {
+		footer += SubtleStyle.Render(" • q: back")
+	} else {
+		footer += SubtleStyle.Render(" • ↑ ↓ select • Enter confirm • ESC close")
 	}
 
 	content += "\n" + SubtleStyle.Render("e: export • q: back")

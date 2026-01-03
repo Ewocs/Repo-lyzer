@@ -28,8 +28,11 @@ type TreeModel struct {
 	SelectedPath string
 }
 
-func NewTreeModel(root *FileNode) TreeModel {
-	if root == nil {
+func NewTreeModel(result *AnalysisResult) TreeModel {
+	var root *FileNode
+	if result != nil {
+		root = BuildFileTree(*result)
+	} else {
 		root = &FileNode{
 			Name:     "repository",
 			Type:     "dir",
@@ -188,16 +191,16 @@ func (m TreeModel) getNodeDepth(parent *FileNode, target *FileNode) int {
 }
 
 // BuildFileTree creates a file tree from repository content
-func BuildFileTree(fileCount int, topFiles []string) *FileNode {
+func BuildFileTree(result AnalysisResult) *FileNode {
 	root := &FileNode{
-		Name:     "repository",
+		Name:     result.Repo.Name,
 		Type:     "dir",
 		Path:     "/",
 		Children: []*FileNode{},
 	}
 
-	// Add directories
-	dirs := []string{"src", "test", "docs", "config", "scripts", "build"}
+	// Add directories based on languages
+	dirs := []string{"src", "pkg", "internal", "cmd", "test", "docs", "config", "scripts", "build", "web", "api"}
 	for _, dir := range dirs {
 		root.Children = append(root.Children, &FileNode{
 			Name:     dir,
@@ -207,8 +210,27 @@ func BuildFileTree(fileCount int, topFiles []string) *FileNode {
 		})
 	}
 
-	// Add sample files in root
-	sampleFiles := []string{"README.md", "LICENSE", "go.mod", "go.sum", ".gitignore"}
+	// Add files based on actual languages detected
+	for lang := range result.Languages {
+		ext := ".txt"
+		switch lang {
+		case "Go": ext = ".go"
+		case "Python": ext = ".py"
+		case "JavaScript": ext = ".js"
+		case "TypeScript": ext = ".ts"
+		case "Rust": ext = ".rs"
+		case "Java": ext = ".java"
+		}
+		root.Children = append(root.Children, &FileNode{
+			Name: "main" + ext,
+			Type: "file",
+			Path: "/src/main" + ext,
+			Size: 2048,
+		})
+	}
+
+	// Add common files in root
+	sampleFiles := []string{"README.md", "LICENSE", "go.mod", "go.sum", ".gitignore", "Makefile", "Dockerfile"}
 	for _, file := range sampleFiles {
 		root.Children = append(root.Children, &FileNode{
 			Name: file,

@@ -18,19 +18,29 @@ const (
 	stateInput
 	stateLoading
 	stateDashboard
+	stateTree
+	stateSettings
+	stateHelp
+	stateHistory
+	stateCompareInput
 )
 
 type MainModel struct {
-	state        sessionState
-	menu         MenuModel
-	input        string // Repository input
-	spinner      spinner.Model
-	dashboard    DashboardModel
-	progress     *ProgressTracker
-	err          error
-	windowWidth  int
-	windowHeight int
-	analysisType string // quick, detailed, custom
+	state         sessionState
+	menu          EnhancedMenuModel
+	input         string // Repository input
+	spinner       spinner.Model
+	dashboard     DashboardModel
+	tree          TreeModel
+	settings      SettingsModel
+	help          HelpModel
+	history       HistoryModel
+	progress      *ProgressTracker
+	err           error
+	windowWidth   int
+	windowHeight  int
+	analysisType  string // quick, detailed, custom
+	appSettings   AppSettings
 }
 
 func NewMainModel() MainModel {
@@ -39,10 +49,12 @@ func NewMainModel() MainModel {
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
 
 	return MainModel{
-		state:     stateMenu,
-		menu:      NewMenuModel(),
-		spinner:   s,
-		dashboard: NewDashboardModel(),
+		state:        stateMenu,
+		menu:         NewMenuModel(),
+		spinner:      s,
+		dashboard:    NewDashboardModel(),
+		tree:         NewTreeModel(nil),
+		appSettings:  appSettings,
 	}
 }
 
@@ -61,10 +73,34 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Propagate to children
 		m.menu.Update(msg)
 		m.dashboard.Update(msg)
+		m.settings.Update(msg)
+		m.help.Update(msg)
+		m.history.Update(msg)
+		newTree, _ := m.tree.Update(msg)
+		m.tree = newTree.(TreeModel)
 
 	case tea.KeyMsg:
 		if msg.String() == "ctrl+c" {
 			return m, tea.Quit
+		}
+		// Global shortcuts
+		if msg.String() == "q" && m.state == stateMenu {
+			return m, tea.Quit
+		}
+
+	case string:
+		if msg == "switch_to_tree" {
+			m.state = stateTree
+			// Update tree with current analysis data
+			if m.dashboard.data.Repo != nil {
+				m.tree = NewTreeModel(&m.dashboard.data)
+				// Initialize tree with current window size
+				var cmd tea.Cmd
+				var tm tea.Model
+				tm, cmd = m.tree.Update(tea.WindowSizeMsg{Width: m.windowWidth, Height: m.windowHeight})
+				m.tree = tm.(TreeModel)
+				cmds = append(cmds, cmd)
+			}
 		}
 	}
 
@@ -98,6 +134,28 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.input += string(msg.Runes)
 			case tea.KeyEsc:
 				m.state = stateMenu
+			}
+		}
+
+	case stateCompareInput:
+		switch msg := msg.(type) {
+		case tea.KeyMsg:
+			switch msg.Type {
+			case tea.KeyEnter:
+				if m.input != "" {
+					m.state = stateLoading
+					cmds = append(cmds, m.analyzeRepo(m.input))
+				}
+			case tea.KeyBackspace:
+				if len(m.input) > 0 {
+					m.input = m.input[:len(m.input)-1]
+				}
+			case tea.KeyRunes:
+				m.input += string(msg.Runes)
+			case tea.KeyEsc:
+				m.state = stateMenu
+				m.menu.Done = false
+				m.input = ""
 			}
 		}
 
