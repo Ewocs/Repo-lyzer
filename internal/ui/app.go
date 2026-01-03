@@ -100,7 +100,6 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case stateLoading:
-		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(msg)
 		cmds = append(cmds, cmd)
 
@@ -187,6 +186,7 @@ func (m MainModel) analyzeRepo(repoName string) tea.Cmd {
 		commits, _ := client.GetCommits(parts[0], parts[1], 365)
 		contributors, _ := client.GetContributors(parts[0], parts[1])
 		languages, _ := client.GetLanguages(parts[0], parts[1])
+		fileTree, _ := client.GetFileTree(parts[0], parts[1], repo.DefaultBranch)
 
 		score := analyzer.CalculateHealth(repo, commits)
 		busFactor, busRisk := analyzer.BusFactor(contributors)
@@ -196,6 +196,7 @@ func (m MainModel) analyzeRepo(repoName string) tea.Cmd {
 			Repo:          repo,
 			Commits:       commits,
 			Contributors:  contributors,
+			FileTree:      fileTree,
 			Languages:     languages,
 			HealthScore:   score,
 			BusFactor:     busFactor,

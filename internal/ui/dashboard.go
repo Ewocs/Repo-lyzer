@@ -22,6 +22,8 @@ func NewDashboardModel() DashboardModel {
 	return DashboardModel{}
 }
 
+func (m DashboardModel) Init() tea.Cmd { return nil }
+
 func (m *DashboardModel) SetData(data AnalysisResult) {
 	m.data = data
 }
@@ -102,9 +104,27 @@ func (m DashboardModel) View() string {
 	chart := RenderCommitActivity(activityData, 10) // Show last 10 days
 	chartBox := BoxStyle.Render(chart)
 
+	// File Tree (Simplified)
+	treeContent := "📂 Files (Top 10):\n"
+	limit := 10
+	if len(m.data.FileTree) < limit {
+		limit = len(m.data.FileTree)
+	}
+	for i := 0; i < limit; i++ {
+		icon := "📄"
+		if m.data.FileTree[i].Type == "tree" {
+			icon = "📁"
+		}
+		treeContent += fmt.Sprintf("%s %s\n", icon, m.data.FileTree[i].Path)
+	}
+	if len(m.data.FileTree) > limit {
+		treeContent += fmt.Sprintf("... and %d more", len(m.data.FileTree)-limit)
+	}
+	treeBox := BoxStyle.Render(treeContent)
+
 	// Layout
-	content := lipgloss.JoinHorizontal(lipgloss.Top, metricsBox, chartBox)
-	content = lipgloss.JoinVertical(lipgloss.Left, header, content)
+	row1 := lipgloss.JoinHorizontal(lipgloss.Top, metricsBox, chartBox)
+	content := lipgloss.JoinVertical(lipgloss.Left, header, row1, treeBox)
 
 	if m.showExport {
 		exportMenu := BoxStyle.Render("Export Options:\n[J] JSON\n[M] Markdown")

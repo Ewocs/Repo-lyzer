@@ -15,6 +15,8 @@
 - **Bus Factor:** Measures critical contributors to assess project risk.
 - **Repo Maturity Score:** Evaluates repository age, activity, and structure.
 - **Recruiter Summary:** Quick summary highlighting key metrics for recruitment evaluation.
+- **File Tree Viewer:** Explore the repository's file structure directly in the dashboard.
+- **Export Options:** Export analysis results to JSON or Markdown.
 - **Compare Mode:** Compare two repositories side by side.
 - **Interactive CLI Menu:** Fully navigable TUI with keyboard arrows, input prompts, and instant feedback.
 - **Colorized Output:** Uses neon-style colors and ASCII styling for a modern CLI experience.
@@ -26,6 +28,7 @@
 - **[Golang](https://golang.org/)** – Core language for CLI development
 - **[Cobra](https://github.com/spf13/cobra)** – CLI command management
 - **[Bubble Tea](https://github.com/charmbracelet/bubbletea)** – Terminal-based interactive UI
+- **[Bubbles](https://github.com/charmbracelet/bubbles)** – TUI components (Spinners, etc.)
 - **[Lipgloss](https://github.com/charmbracelet/lipgloss)** – Styling terminal output, colors, borders, alignment
 - **[Tablewriter](https://github.com/olekukonko/tablewriter)** – Beautiful tables in the terminal
 - **[x/term](https://pkg.go.dev/golang.org/x/term)** – Terminal size detection

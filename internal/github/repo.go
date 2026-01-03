@@ -10,6 +10,7 @@ type Repo struct {
 	OpenIssues  int    `json:"open_issues_count"`
 	Description string `json:"description"`
 	CreatedAt   time.Time `json:"created_at"`
+	DefaultBranch string `json:"default_branch"`
 }
 
 func (c *Client) GetRepo(owner, repo string) (*Repo, error) {

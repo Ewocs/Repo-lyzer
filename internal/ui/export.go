@@ -30,6 +30,19 @@ func ExportMarkdown(data AnalysisResult, filename string) error {
 	md += fmt.Sprintf("## Bus Factor: %d (%s)\n", data.BusFactor, data.BusRisk)
 	md += fmt.Sprintf("## Maturity: %s (%d)\n", data.MaturityLevel, data.MaturityScore)
 	
+	md += "\n## File Tree (Top 20)\n"
+	limit := 20
+	if len(data.FileTree) < limit {
+		limit = len(data.FileTree)
+	}
+	for i := 0; i < limit; i++ {
+		icon := "📄"
+		if data.FileTree[i].Type == "tree" {
+			icon = "📁"
+		}
+		md += fmt.Sprintf("- %s %s\n", icon, data.FileTree[i].Path)
+	}
+
 	_, err = file.WriteString(md)
 	return err
 }

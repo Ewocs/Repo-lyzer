@@ -3,7 +3,7 @@ module github.com/agnivo988/Repo-lyzer
 go 1.24.4
 
 require (
-	github.com/charmbracelet/x/term v0.2.1
+	github.com/charmbracelet/bubbles v0.21.0
 	github.com/spf13/cobra v1.10.2
 )
 
@@ -12,6 +12,7 @@ require (
 	github.com/charmbracelet/colorprofile v0.2.3-0.20250311203215-f60798e515dc // indirect
 	github.com/charmbracelet/x/ansi v0.10.1 // indirect
 	github.com/charmbracelet/x/cellbuf v0.0.13-0.20250311204145-2c3ea96c31dd // indirect
+	github.com/charmbracelet/x/term v0.2.1 // indirect
 	github.com/clipperhouse/displaywidth v0.6.0 // indirect
 	github.com/clipperhouse/stringish v0.1.1 // indirect
 	github.com/clipperhouse/uax29/v2 v2.3.0 // indirect
