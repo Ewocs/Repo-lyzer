@@ -26,6 +26,7 @@ func (m DashboardModel) Init() tea.Cmd { return nil }
 
 func (m *DashboardModel) SetData(data AnalysisResult) {
 	m.data = data
+	m.bridge = NewAnalyzerDataBridge(data)
 }
 
 type exportMsg struct {
