@@ -106,6 +106,13 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				cmds = append(cmds, cmd)
 			}
 		}
+		if msg == "refresh_data" {
+			// Re-analyze the current repo
+			if m.dashboard.data.Repo != nil {
+				m.state = stateLoading
+				cmds = append(cmds, m.analyzeRepo(m.dashboard.data.Repo.FullName))
+			}
+		}
 	}
 
 	switch m.state {
@@ -144,6 +151,21 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.input += string(msg.Runes)
 			case tea.KeyEsc:
 				m.state = stateMenu
+			case tea.KeyCtrlU:
+				m.input = "" // Clear entire line
+			case tea.KeyCtrlA:
+				// Move to start - for TUI we just clear (no cursor)
+				// In a real implementation, you'd track cursor position
+			case tea.KeyCtrlE:
+				// Move to end - already at end in this simple impl
+			case tea.KeyCtrlW:
+				// Delete word backward
+				m.input = strings.TrimRight(m.input, " ")
+				if idx := strings.LastIndex(m.input, " "); idx >= 0 {
+					m.input = m.input[:idx+1]
+				} else {
+					m.input = ""
+				}
 			}
 		}
 
@@ -182,6 +204,30 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.compareInput1 = ""
 					m.compareInput2 = ""
 				}
+			case tea.KeyCtrlU:
+				// Clear current input
+				if m.compareStep == 0 {
+					m.compareInput1 = ""
+				} else {
+					m.compareInput2 = ""
+				}
+			case tea.KeyCtrlW:
+				// Delete word backward
+				if m.compareStep == 0 {
+					m.compareInput1 = strings.TrimRight(m.compareInput1, " ")
+					if idx := strings.LastIndex(m.compareInput1, " "); idx >= 0 {
+						m.compareInput1 = m.compareInput1[:idx+1]
+					} else {
+						m.compareInput1 = ""
+					}
+				} else {
+					m.compareInput2 = strings.TrimRight(m.compareInput2, " ")
+					if idx := strings.LastIndex(m.compareInput2, " "); idx >= 0 {
+						m.compareInput2 = m.compareInput2[:idx+1]
+					} else {
+						m.compareInput2 = ""
+					}
+				}
 			}
 		}
 
@@ -189,16 +235,22 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.spinner, cmd = m.spinner.Update(msg)
 		cmds = append(cmds, cmd)
 
-		if result, ok := msg.(CompareResult); ok {
-			m.compareResult = &result
+		switch msg := msg.(type) {
+		case CompareResult:
+			m.compareResult = &msg
 			m.state = stateCompareResult
-			m.progress = nil
-		}
-		if err, ok := msg.(error); ok {
-			m.err = err
+			m.err = nil
+		case error:
+			m.err = msg
 			m.state = stateCompareInput
 			m.compareStep = 0
-			m.progress = nil
+		case tea.KeyMsg:
+			if msg.String() == "esc" {
+				m.state = stateMenu
+				m.compareInput1 = ""
+				m.compareInput2 = ""
+				m.err = nil
+			}
 		}
 
 	case stateCompareResult:

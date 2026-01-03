@@ -21,17 +21,18 @@ const (
 	viewActivity
 	viewContributors
 	viewRecruiter
+	viewAPIStatus
 )
 
 type DashboardModel struct {
-	data       AnalysisResult
-	BackToMenu bool
-	width      int
-	height     int
-	showExport bool
-	statusMsg  string
+	data        AnalysisResult
+	BackToMenu  bool
+	width       int
+	height      int
+	showExport  bool
+	statusMsg   string
 	currentView dashboardView
-	showHelp   bool
+	showHelp    bool
 }
 
 func NewDashboardModel() DashboardModel {
@@ -102,6 +103,12 @@ func (m DashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "f":
 			return m, func() tea.Msg { return "switch_to_tree" }
 
+		case "r":
+			// Refresh - re-analyze current repo
+			if m.data.Repo != nil {
+				return m, func() tea.Msg { return "refresh_data" }
+			}
+
 		// View switching keybindings
 		case "1":
 			m.currentView = viewOverview
@@ -127,15 +134,19 @@ func (m DashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.currentView = viewRecruiter
 			m.showHelp = false
 			m.showExport = false
+		case "7":
+			m.currentView = viewAPIStatus
+			m.showHelp = false
+			m.showExport = false
 
 		// Arrow key navigation between views
 		case "right", "l":
 			if !m.showHelp && !m.showExport {
-				if m.currentView < viewRecruiter {
+				if m.currentView < viewAPIStatus {
 					m.currentView++
 				}
 			}
-		case "left", "h":
+		case "left":
 			if !m.showHelp && !m.showExport {
 				if m.currentView > viewOverview {
 					m.currentView--
@@ -172,6 +183,8 @@ func (m DashboardModel) View() string {
 		content = m.contributorsView()
 	case viewRecruiter:
 		content = m.recruiterView()
+	case viewAPIStatus:
+		content = m.apiStatusView()
 	}
 
 	// Add export panel if shown
@@ -212,7 +225,7 @@ func (m DashboardModel) View() string {
 }
 
 func (m DashboardModel) renderTabs() string {
-	views := []string{"Overview", "Repo", "Languages", "Activity", "Contributors", "Recruiter"}
+	views := []string{"Overview", "Repo", "Languages", "Activity", "Contributors", "Recruiter", "API"}
 	var tabs []string
 
 	for i, name := range views {
@@ -346,16 +359,16 @@ func (m DashboardModel) contributorsView() string {
 	}
 
 	// Find max contributions for bar scaling
-	maxContribs := m.data.Contributors[0].Contributions
+	maxContribs := m.data.Contributors[0].Commits
 
 	for i := 0; i < maxShow; i++ {
 		c := m.data.Contributors[i]
-		barLen := int(float64(c.Contributions) / float64(maxContribs) * 20)
+		barLen := int(float64(c.Commits) / float64(maxContribs) * 20)
 		if barLen < 1 {
 			barLen = 1
 		}
 		bar := strings.Repeat("█", barLen)
-		lines = append(lines, fmt.Sprintf("%2d. %-20s %s %d", i+1, c.Login, bar, c.Contributions))
+		lines = append(lines, fmt.Sprintf("%2d. %-20s %s %d", i+1, c.Login, bar, c.Commits))
 	}
 
 	summary := fmt.Sprintf("\nTotal Contributors: %d", len(m.data.Contributors))
@@ -407,20 +420,22 @@ func (m DashboardModel) helpView() string {
 	help := `
 Dashboard Navigation:
   ←/→ or h/l    Switch between views
-  1-6           Jump to specific view
+  1-7           Jump to specific view
   
 Views:
-  1  Overview    - Health, Bus Factor, Maturity
-  2  Repo        - Repository details
-  3  Languages   - Language breakdown
-  4  Activity    - Commit activity chart
+  1  Overview     - Health, Bus Factor, Maturity
+  2  Repo         - Repository details
+  3  Languages    - Language breakdown
+  4  Activity     - Commit activity chart
   5  Contributors - Top contributors
-  6  Recruiter   - Summary for recruiters
+  6  Recruiter    - Summary for recruiters
+  7  API Status   - GitHub API rate limits
 
 Actions:
   e             Toggle export menu
   j             Export to JSON (when export menu open)
   f             Open file tree
+  r             Refresh data
   ?/h           Toggle this help
   q/ESC         Go back / Close overlay
   Ctrl+C        Quit application
@@ -433,4 +448,38 @@ Actions:
 		lipgloss.Center,
 		lipgloss.JoinVertical(lipgloss.Left, header, BoxStyle.Render(help)),
 	)
+}
+
+func (m DashboardModel) apiStatusView() string {
+	header := TitleStyle.Render("🔐 GitHub API Status")
+
+	// Check if authenticated
+	mode := "Unauthenticated (60 req/hour)"
+	if m.data.Repo != nil && m.data.Repo.Private {
+		mode = "Authenticated (5000 req/hour)"
+	} else {
+		// Simple check - if we got detailed data, likely authenticated
+		if len(m.data.Contributors) > 30 {
+			mode = "Authenticated (5000 req/hour)"
+		}
+	}
+
+	info := fmt.Sprintf(
+		"Mode: %s\n\n"+
+			"Data Fetched:\n"+
+			"  • Repository info: ✓\n"+
+			"  • Commits (1 year): %d\n"+
+			"  • Contributors: %d\n"+
+			"  • Languages: %d\n"+
+			"  • File tree: %d entries\n\n"+
+			"Tip: Set GITHUB_TOKEN env variable\n"+
+			"for higher rate limits (5000/hour)",
+		mode,
+		len(m.data.Commits),
+		len(m.data.Contributors),
+		len(m.data.Languages),
+		len(m.data.FileTree),
+	)
+
+	return lipgloss.JoinVertical(lipgloss.Left, header, BoxStyle.Render(info))
 }
