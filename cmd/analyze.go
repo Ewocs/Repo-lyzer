@@ -88,7 +88,3 @@ var analyzeCmd = &cobra.Command{
 		return nil
 	},
 }
-
-func init() {
-	rootCmd.AddCommand(analyzeCmd)
-}
