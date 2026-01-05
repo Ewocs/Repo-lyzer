@@ -20,6 +20,7 @@ const (
 	stateLoading
 	stateDashboard
 	stateTree
+	stateFileEdit
 	stateSettings
 	stateHelp
 	stateHistory
@@ -38,6 +39,7 @@ type MainModel struct {
 	spinner        spinner.Model
 	dashboard      DashboardModel
 	tree           TreeModel
+	fileEdit       FileEditModel
 	help           help.Model
 	progress       *ProgressTracker
 	err            error
@@ -444,8 +446,34 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, newCmd)
 
 		if m.tree.Done {
-			m.state = stateDashboard
+			if m.tree.SelectedPath != "" {
+				// Initialize file edit model
+				repoName := m.input
+				if m.dashboard.data.Repo != nil && m.dashboard.data.Repo.FullName != "" {
+					repoName = m.dashboard.data.Repo.FullName
+				}
+				m.fileEdit = NewFileEditModel(m.tree.SelectedPath, repoName)
+
+				// Check ownership
+				isOwner := m.checkOwnership()
+				m.fileEdit.SetOwnership(isOwner)
+
+				m.state = stateFileEdit
+			} else {
+				m.state = stateDashboard
+			}
 			m.tree.Done = false
+			m.tree.SelectedPath = ""
+		}
+
+	case stateFileEdit:
+		newFileEdit, newCmd := m.fileEdit.Update(msg)
+		m.fileEdit = newFileEdit.(FileEditModel)
+		cmds = append(cmds, newCmd)
+
+		if m.fileEdit.Done {
+			m.state = stateTree
+			m.fileEdit.Done = false
 		}
 	}
 
@@ -510,6 +538,8 @@ func (m MainModel) View() string {
 		return m.compareResultView()
 	case stateTree:
 		return m.tree.View()
+	case stateFileEdit:
+		return m.fileEdit.View()
 	case stateHelp:
 		return m.helpView()
 	case stateSettings:
@@ -609,6 +639,17 @@ func (m MainModel) analyzeRepo(repoName string) tea.Cmd {
 			MaturityLevel: maturityLevel,
 		}
 	}
+}
+
+func (m MainModel) checkOwnership() bool {
+	client := github.NewClient()
+	user, err := client.GetUser()
+	if err != nil {
+		return false // If we can't get user, assume not owner
+	}
+
+	expectedOwner := m.fileEdit.repoOwner
+	return user.Login == expectedOwner
 }
 
 func (m MainModel) compareInputView() string {

@@ -8,8 +8,13 @@ import (
 )
 
 type Client struct {
-	http *http.Client
+	http  *http.Client
 	token string
+}
+
+type User struct {
+	Login string `json:"login"`
+	Name  string `json:"name"`
 }
 
 func NewClient() *Client {
@@ -24,6 +29,7 @@ func NewClient() *Client {
 // Parameters:
 //   - url: The GitHub API endpoint URL
 //   - target: Pointer to struct where the JSON response will be decoded
+//
 // Returns an error if the request fails or the response cannot be decoded.
 func (c *Client) get(url string, target interface{}) error {
 	req, err := http.NewRequest("GET", url, nil)
@@ -51,4 +57,10 @@ func (c *Client) get(url string, target interface{}) error {
 	}
 
 	return json.NewDecoder(resp.Body).Decode(target)
+}
+
+func (c *Client) GetUser() (*User, error) {
+	var u User
+	err := c.get("https://api.github.com/user", &u)
+	return &u, err
 }
