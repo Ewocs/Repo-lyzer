@@ -12,6 +12,15 @@ import "github.com/agnivo988/Repo-lyzer/internal/github"
 // Returns:
 //   - int: Risk score (1=High Risk, 2=Medium Risk, 3=Low Risk)
 //   - string: Risk level description
+//
+// Example:
+//   contributors := []github.Contributor{
+//       {Commits: 100},
+//       {Commits: 50},
+//       {Commits: 25},
+//   }
+//   score, risk := BusFactor(contributors)
+//   // score: 2, risk: "Medium Risk"
 func BusFactor(contributors []github.Contributor) (int, string) {
 	if len(contributors) == 0 {
 		return 0, "Unknown"
