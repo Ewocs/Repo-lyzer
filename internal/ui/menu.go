@@ -119,6 +119,7 @@ func (m *MenuModel) enterSubmenu() {
 		m.submenuType = "settings"
 		m.submenuChoices = []string{
 			"Theme Settings",
+			"Cache Settings",
 			"Export Options",
 			"GitHub Token",
 			"Reset to Defaults",

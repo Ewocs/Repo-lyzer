@@ -33,6 +33,7 @@ type DashboardModel struct {
 	statusMsg   string
 	currentView dashboardView
 	showHelp    bool
+	cacheStatus string // "fresh", "cached", or ""
 }
 
 func NewDashboardModel() DashboardModel {
@@ -45,6 +46,10 @@ func (m DashboardModel) Init() tea.Cmd { return nil }
 
 func (m *DashboardModel) SetData(data AnalysisResult) {
 	m.data = data
+}
+
+func (m *DashboardModel) SetCacheStatus(status string) {
+	m.cacheStatus = status
 }
 
 type exportMsg struct {
@@ -264,8 +269,19 @@ func (m DashboardModel) renderTabs() string {
 }
 
 func (m DashboardModel) overviewView() string {
+	// Cache status indicator
+	cacheIndicator := ""
+	switch m.cacheStatus {
+	case "fresh":
+		cacheIndicator = " 🟢 Fresh"
+	case "cached":
+		cacheIndicator = " 🟡 Cached"
+	case "expired":
+		cacheIndicator = " 🔴 Expired"
+	}
+
 	header := TitleStyle.Render(
-		fmt.Sprintf("📊 Analysis for %s", m.data.Repo.FullName),
+		fmt.Sprintf("📊 Analysis for %s%s", m.data.Repo.FullName, cacheIndicator),
 	)
 
 	metrics := fmt.Sprintf(

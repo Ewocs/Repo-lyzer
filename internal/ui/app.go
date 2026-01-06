@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -8,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/agnivo988/Repo-lyzer/internal/analyzer"
+	"github.com/agnivo988/Repo-lyzer/internal/cache"
 	"github.com/agnivo988/Repo-lyzer/internal/github"
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/spinner"
@@ -57,12 +59,17 @@ type MainModel struct {
 	historyCursor  int            // Current selection in history
 	helpContent    string         // Content for help screen
 	settingsOption string         // Selected settings option
+	cache          *cache.Cache   // Offline cache for analysis results
+	cacheStatus    string         // Cache status: "fresh", "cached", "expired", ""
 }
 
 func NewMainModel() MainModel {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
+
+	// Initialize cache
+	repoCache, _ := cache.NewCache()
 
 	return MainModel{
 		state:       stateMenu,
@@ -71,6 +78,7 @@ func NewMainModel() MainModel {
 		dashboard:   NewDashboardModel(),
 		tree:        NewTreeModel(nil),
 		appSettings: nil,
+		cache:       repoCache,
 	}
 }
 
@@ -168,7 +176,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case 4: // Settings
 				if m.menu.submenuType == "settings" {
 					// Settings option selection
-					settingsOptions := []string{"theme", "export", "token", "reset"}
+					settingsOptions := []string{"theme", "cache", "export", "token", "reset"}
 					if m.menu.submenuCursor < len(settingsOptions) {
 						m.settingsOption = settingsOptions[m.menu.submenuCursor]
 					}
@@ -364,13 +372,28 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		if result, ok := msg.(AnalysisResult); ok {
 			m.dashboard.SetData(result)
+			m.dashboard.SetCacheStatus("fresh")
 			m.state = stateDashboard
 			m.progress = nil
+			m.cacheStatus = "fresh"
 			// Save to history
 			if m.history == nil {
 				m.history, _ = LoadHistory()
 			}
 			m.history.AddEntry(result)
+			m.history.Save()
+		}
+		if cachedResult, ok := msg.(CachedAnalysisResult); ok {
+			m.dashboard.SetData(cachedResult.Result)
+			m.dashboard.SetCacheStatus("cached")
+			m.state = stateDashboard
+			m.progress = nil
+			m.cacheStatus = "cached"
+			// Save to history
+			if m.history == nil {
+				m.history, _ = LoadHistory()
+			}
+			m.history.AddEntry(cachedResult.Result)
 			m.history.Save()
 		}
 		if err, ok := msg.(error); ok {
@@ -445,6 +468,40 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if idx >= 0 && idx < len(AvailableThemes) {
 					theme := SetThemeByIndex(idx)
 					m.err = fmt.Errorf("Theme: %s", theme.Name)
+				}
+			case "e":
+				// Toggle cache enabled (only in cache settings)
+				if m.settingsOption == "cache" && m.cache != nil {
+					cfg := m.cache.GetConfig()
+					m.cache.SetEnabled(!cfg.Enabled)
+					if cfg.Enabled {
+						m.err = fmt.Errorf("Cache disabled")
+					} else {
+						m.err = fmt.Errorf("Cache enabled")
+					}
+				}
+			case "a":
+				// Toggle auto-cache (only in cache settings)
+				if m.settingsOption == "cache" && m.cache != nil {
+					cfg := m.cache.GetConfig()
+					m.cache.SetAutoCache(!cfg.AutoCache)
+					if cfg.AutoCache {
+						m.err = fmt.Errorf("Auto-cache disabled")
+					} else {
+						m.err = fmt.Errorf("Auto-cache enabled")
+					}
+				}
+			case "c":
+				// Clear all cache (only in cache settings)
+				if m.settingsOption == "cache" && m.cache != nil {
+					m.cache.Clear()
+					m.err = fmt.Errorf("Cache cleared")
+				}
+			case "x":
+				// Clean expired entries (only in cache settings)
+				if m.settingsOption == "cache" && m.cache != nil {
+					removed := m.cache.CleanExpired()
+					m.err = fmt.Errorf("Removed %d expired entries", removed)
 				}
 			}
 		}
@@ -685,6 +742,22 @@ func (m MainModel) analyzeRepo(repoName string) tea.Cmd {
 			return fmt.Errorf("repository must be in owner/repo format")
 		}
 
+		// Check cache first
+		if m.cache != nil {
+			if entry, found := m.cache.Get(repoName); found {
+				// Unmarshal cached analysis
+				var result AnalysisResult
+				if err := json.Unmarshal(entry.Analysis, &result); err == nil {
+					// Return cached result with status
+					return CachedAnalysisResult{
+						Result:   result,
+						IsCached: true,
+						CachedAt: entry.CachedAt,
+					}
+				}
+			}
+		}
+
 		tracker := NewProgressTracker()
 
 		// Stage 1: Fetch repository
@@ -729,7 +802,7 @@ func (m MainModel) analyzeRepo(repoName string) tea.Cmd {
 		// Mark complete
 		tracker.NextStage()
 
-		return AnalysisResult{
+		result := AnalysisResult{
 			Repo:          repo,
 			Commits:       commits,
 			Contributors:  contributors,
@@ -741,6 +814,13 @@ func (m MainModel) analyzeRepo(repoName string) tea.Cmd {
 			MaturityScore: maturityScore,
 			MaturityLevel: maturityLevel,
 		}
+
+		// Save to cache
+		if m.cache != nil {
+			m.cache.Set(repoName, result)
+		}
+
+		return result
 	}
 }
 
@@ -1249,6 +1329,47 @@ Keybindings:
 
 Theme changes are applied immediately!
 `, CurrentTheme.Name, themeList)
+	case "cache":
+		title = "� Cachre Settings"
+		
+		// Get cache stats
+		cacheInfo := "Cache not initialized"
+		if m.cache != nil {
+			stats := m.cache.GetStats()
+			cfg := m.cache.GetConfig()
+			
+			enabledStr := "Disabled"
+			if cfg.Enabled {
+				enabledStr = "Enabled"
+			}
+			autoStr := "Off"
+			if cfg.AutoCache {
+				autoStr = "On"
+			}
+			
+			cacheInfo = fmt.Sprintf(`
+Status: %s
+Auto-cache: %s
+TTL: %s
+Max Size: %d MB
+
+Statistics:
+  • Total repos cached: %d
+  • Valid (not expired): %d
+  • Expired: %d
+  • Cache size: %.2f MB
+  • Location: %s
+
+Keybindings:
+  • Press 'e' to toggle caching
+  • Press 'a' to toggle auto-cache
+  • Press 'c' to clear all cache
+  • Press 'x' to clean expired entries
+`, enabledStr, autoStr, cache.FormatTTL(cfg.TTL), cfg.MaxSize,
+				stats.TotalRepos, stats.ValidRepos, stats.ExpiredRepos,
+				stats.TotalSizeMB, stats.CacheDir)
+		}
+		content = cacheInfo
 	case "export":
 		title = "📤 Export Options"
 		content = `
@@ -1259,7 +1380,7 @@ Export formats available:
   • PDF: Professional documents
 
 Default export location:
-  ./exports/
+  ~/Downloads/
 
 To change export settings:
   1. Modify export configuration
