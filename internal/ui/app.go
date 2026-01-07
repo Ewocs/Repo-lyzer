@@ -798,8 +798,9 @@ func (m MainModel) analyzeRepo(repoName string) tea.Cmd {
 		busFactor, busRisk := analyzer.BusFactor(contributors)
 		maturityScore, maturityLevel := analyzer.RepoMaturityScore(repo, len(commits), len(contributors), false)
 
-		// Stage 6: Analyze dependencies
+		// Stage 6: Analyze dependencies and contributor insights
 		deps, _ := analyzer.AnalyzeDependencies(client, parts[0], parts[1], repo.DefaultBranch, fileTree)
+		contributorInsights := analyzer.AnalyzeContributors(contributors)
 
 		// Stage 7: Security vulnerability scan
 		security, _ := analyzer.ScanDependencies(deps)
@@ -809,18 +810,19 @@ func (m MainModel) analyzeRepo(repoName string) tea.Cmd {
 		tracker.NextStage()
 
 		result := AnalysisResult{
-			Repo:          repo,
-			Commits:       commits,
-			Contributors:  contributors,
-			FileTree:      fileTree,
-			Languages:     languages,
-			HealthScore:   score,
-			BusFactor:     busFactor,
-			BusRisk:       busRisk,
-			MaturityScore: maturityScore,
-			MaturityLevel: maturityLevel,
-			Dependencies:  deps,
-			Security:      security,
+			Repo:                repo,
+			Commits:             commits,
+			Contributors:        contributors,
+			FileTree:            fileTree,
+			Languages:           languages,
+			HealthScore:         score,
+			BusFactor:           busFactor,
+			BusRisk:             busRisk,
+			MaturityScore:       maturityScore,
+			MaturityLevel:       maturityLevel,
+			Dependencies:        deps,
+			ContributorInsights: contributorInsights,
+			Security:            security,
 		}
 
 		// Save to cache

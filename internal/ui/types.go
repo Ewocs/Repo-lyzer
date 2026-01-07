@@ -8,18 +8,19 @@ import (
 )
 
 type AnalysisResult struct {
-	Repo          *github.Repo
-	Commits       []github.Commit
-	Contributors  []github.Contributor
-	FileTree      []github.TreeEntry
-	Languages     map[string]int
-	HealthScore   int
-	BusFactor     int
-	BusRisk       string
-	MaturityScore int
-	MaturityLevel string
-	Dependencies  *analyzer.DependencyAnalysis
-	Security      *analyzer.SecurityScanResult
+	Repo                 *github.Repo
+	Commits              []github.Commit
+	Contributors         []github.Contributor
+	FileTree             []github.TreeEntry
+	Languages            map[string]int
+	HealthScore          int
+	BusFactor            int
+	BusRisk              string
+	MaturityScore        int
+	MaturityLevel        string
+	Dependencies         *analyzer.DependencyAnalysis
+	ContributorInsights  *analyzer.ContributorInsights
+	Security             *analyzer.SecurityScanResult
 }
 
 // CachedAnalysisResult wraps AnalysisResult with cache metadata
