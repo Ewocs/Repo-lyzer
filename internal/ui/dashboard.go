@@ -1,3 +1,4 @@
+
 package ui
 
 import (
@@ -104,7 +105,7 @@ func (m DashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "j":
 			if m.showExport {
 				return m, func() tea.Msg {
-					_,err := ExportJSON(m.data, "analysis.json")
+					_, err := ExportJSON(m.data, "analysis.json")
 					if err != nil {
 						return exportMsg{err, ""}
 					}
@@ -115,7 +116,7 @@ func (m DashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "m":
 			if m.showExport {
 				return m, func() tea.Msg {
-					_,err := ExportMarkdown(m.data, "analysis.md")
+					_, err := ExportMarkdown(m.data, "analysis.md")
 					if err != nil {
 						return exportMsg{err, ""}
 					}
