@@ -784,7 +784,7 @@ func (m MainModel) cloneRepo(repoName string) tea.Cmd {
 		// Clone the repository
 		repoURL := fmt.Sprintf("https://github.com/%s/%s.git", parts[0], parts[1])
 		cmd := exec.Command("git", "clone", repoURL, clonePath)
-		
+
 		if err := cmd.Run(); err != nil {
 			return cloneResult{err: fmt.Errorf("clone failed: %w", err)}
 		}
@@ -858,9 +858,12 @@ func (m MainModel) analyzeRepo(repoName string) tea.Cmd {
 		score := analyzer.CalculateHealth(repo, commits)
 		busFactor, busRisk := analyzer.BusFactor(contributors)
 		maturityScore, maturityLevel := analyzer.RepoMaturityScore(repo, len(commits), len(contributors), false)
-		
+
 		// Stage 6: Analyze dependencies
 		deps, _ := analyzer.AnalyzeDependencies(client, parts[0], parts[1], repo.DefaultBranch, fileTree)
+
+		// Stage 7: Security vulnerability scan
+		security, _ := analyzer.ScanDependencies(deps)
 		tracker.NextStage()
 
 		// Mark complete
@@ -878,6 +881,7 @@ func (m MainModel) analyzeRepo(repoName string) tea.Cmd {
 			MaturityScore: maturityScore,
 			MaturityLevel: maturityLevel,
 			Dependencies:  deps,
+			Security:      security,
 		}
 
 		// Save to cache
@@ -1442,7 +1446,7 @@ func (m MainModel) settingsView() string {
 	switch m.settingsOption {
 	case "theme":
 		title = "🎨 Theme Settings"
-		
+
 		// Build theme list with current indicator
 		themeList := ""
 		for i, theme := range AvailableThemes {
@@ -1452,7 +1456,7 @@ func (m MainModel) settingsView() string {
 			}
 			themeList += fmt.Sprintf("  %s[%d] %s\n", indicator, i+1, theme.Name)
 		}
-		
+
 		content = fmt.Sprintf(`
 Current theme: %s
 
@@ -1466,13 +1470,13 @@ Theme changes are applied immediately!
 `, CurrentTheme.Name, themeList)
 	case "cache":
 		title = "� Cachre Settings"
-		
+
 		// Get cache stats
 		cacheInfo := "Cache not initialized"
 		if m.cache != nil {
 			stats := m.cache.GetStats()
 			cfg := m.cache.GetConfig()
-			
+
 			enabledStr := "Disabled"
 			if cfg.Enabled {
 				enabledStr = "Enabled"
@@ -1481,7 +1485,7 @@ Theme changes are applied immediately!
 			if cfg.AutoCache {
 				autoStr = "On"
 			}
-			
+
 			cacheInfo = fmt.Sprintf(`
 Status: %s
 Auto-cache: %s

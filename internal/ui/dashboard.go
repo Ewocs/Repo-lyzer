@@ -1,3 +1,4 @@
+
 package ui
 
 import (
@@ -20,6 +21,8 @@ const (
 	viewLanguages
 	viewActivity
 	viewContributors
+	viewDependencies
+	viewSecurity
 	viewRecruiter
 	viewAPIStatus
 )
@@ -101,7 +104,7 @@ func (m DashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "j":
 			if m.showExport {
 				return m, func() tea.Msg {
-					_,err := ExportJSON(m.data, "analysis.json")
+					_, err := ExportJSON(m.data, "analysis.json")
 					if err != nil {
 						return exportMsg{err, ""}
 					}
@@ -112,7 +115,7 @@ func (m DashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "m":
 			if m.showExport {
 				return m, func() tea.Msg {
-					_,err := ExportMarkdown(m.data, "analysis.md")
+					_, err := ExportMarkdown(m.data, "analysis.md")
 					if err != nil {
 						return exportMsg{err, ""}
 					}
@@ -157,10 +160,18 @@ func (m DashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.showHelp = false
 			m.showExport = false
 		case "6":
-			m.currentView = viewRecruiter
+			m.currentView = viewDependencies
 			m.showHelp = false
 			m.showExport = false
 		case "7":
+			m.currentView = viewSecurity
+			m.showHelp = false
+			m.showExport = false
+		case "8":
+			m.currentView = viewRecruiter
+			m.showHelp = false
+			m.showExport = false
+		case "9":
 			m.currentView = viewAPIStatus
 			m.showHelp = false
 			m.showExport = false
@@ -215,6 +226,10 @@ func (m DashboardModel) View() string {
 		content = m.activityView()
 	case viewContributors:
 		content = m.contributorsView()
+	case viewDependencies:
+		content = m.dependenciesView()
+	case viewSecurity:
+		content = m.securityView()
 	case viewRecruiter:
 		content = m.recruiterView()
 	case viewAPIStatus:
@@ -259,7 +274,7 @@ func (m DashboardModel) View() string {
 }
 
 func (m DashboardModel) renderTabs() string {
-	views := []string{"Overview", "Repo", "Languages", "Activity", "Contributors", "Recruiter", "API"}
+	views := []string{"Overview", "Repo", "Langs", "Activity", "Contribs", "Deps", "Security", "Recruiter", "API"}
 	var tabs []string
 
 	for i, name := range views {
@@ -420,6 +435,173 @@ func (m DashboardModel) contributorsView() string {
 	lines = append(lines, summary)
 
 	return lipgloss.JoinVertical(lipgloss.Left, header, BoxStyle.Render(strings.Join(lines, "\n")))
+}
+
+func (m DashboardModel) dependenciesView() string {
+	header := TitleStyle.Render("📦 Dependencies")
+
+	if m.data.Dependencies == nil || len(m.data.Dependencies.Files) == 0 {
+		return lipgloss.JoinVertical(lipgloss.Left, header, BoxStyle.Render("No dependency files found (package.json, go.mod, requirements.txt, etc.)"))
+	}
+
+	deps := m.data.Dependencies
+	var sections []string
+
+	// Summary
+	summary := fmt.Sprintf(
+		"Total Dependencies: %d\n"+
+			"Package Managers: %s\n"+
+			"Lock File: %s",
+		deps.TotalDeps,
+		strings.Join(deps.Languages, ", "),
+		boolToYesNo(deps.HasLockFile),
+	)
+	sections = append(sections, BoxStyle.Render("📊 Summary\n"+summary))
+
+	// Show dependencies by file
+	for _, file := range deps.Files {
+		var lines []string
+		lines = append(lines, fmt.Sprintf("📄 %s (%s) - %d deps", file.Filename, file.FileType, file.TotalCount))
+		lines = append(lines, strings.Repeat("─", 50))
+
+		// Group by type
+		prodDeps := []string{}
+		devDeps := []string{}
+		otherDeps := []string{}
+
+		for _, dep := range file.Dependencies {
+			depLine := fmt.Sprintf("  %-30s %s", dep.Name, dep.Version)
+			switch dep.Type {
+			case "production":
+				prodDeps = append(prodDeps, depLine)
+			case "dev":
+				devDeps = append(devDeps, depLine)
+			default:
+				otherDeps = append(otherDeps, depLine)
+			}
+		}
+
+		if len(prodDeps) > 0 {
+			lines = append(lines, "\n🔹 Production:")
+			maxShow := 10
+			if len(prodDeps) < maxShow {
+				maxShow = len(prodDeps)
+			}
+			lines = append(lines, prodDeps[:maxShow]...)
+			if len(prodDeps) > maxShow {
+				lines = append(lines, fmt.Sprintf("  ... and %d more", len(prodDeps)-maxShow))
+			}
+		}
+
+		if len(devDeps) > 0 {
+			lines = append(lines, "\n🔸 Dev:")
+			maxShow := 5
+			if len(devDeps) < maxShow {
+				maxShow = len(devDeps)
+			}
+			lines = append(lines, devDeps[:maxShow]...)
+			if len(devDeps) > maxShow {
+				lines = append(lines, fmt.Sprintf("  ... and %d more", len(devDeps)-maxShow))
+			}
+		}
+
+		if len(otherDeps) > 0 {
+			lines = append(lines, "\n🔻 Other:")
+			lines = append(lines, otherDeps...)
+		}
+
+		sections = append(sections, BoxStyle.Render(strings.Join(lines, "\n")))
+	}
+
+	content := lipgloss.JoinVertical(lipgloss.Left, sections...)
+	return lipgloss.JoinVertical(lipgloss.Left, header, content)
+}
+
+func boolToYesNo(b bool) string {
+	if b {
+		return "✓ Yes"
+	}
+	return "✗ No"
+}
+
+func (m DashboardModel) securityView() string {
+	header := TitleStyle.Render("�  Security Scan")
+
+	if m.data.Security == nil {
+		return lipgloss.JoinVertical(lipgloss.Left, header, BoxStyle.Render("No security scan data available"))
+	}
+
+	sec := m.data.Security
+
+	// Security score and grade
+	grade := analyzer.GetSecurityGrade(sec.SecurityScore)
+	scoreColor := "green"
+	if sec.SecurityScore < 70 {
+		scoreColor = "red"
+	} else if sec.SecurityScore < 90 {
+		scoreColor = "yellow"
+	}
+
+	summary := fmt.Sprintf(
+		"Security Score: %d/100 (Grade: %s)\n"+
+			"Packages Scanned: %d\n"+
+			"Vulnerabilities Found: %d\n\n"+
+			"  🔴 Critical: %d\n"+
+			"  🟠 High: %d\n"+
+			"  🟡 Medium: %d\n"+
+			"  🟢 Low: %d",
+		sec.SecurityScore, grade,
+		sec.ScannedPackages,
+		sec.TotalCount,
+		sec.CriticalCount,
+		sec.HighCount,
+		sec.MediumCount,
+		sec.LowCount,
+	)
+	_ = scoreColor // Used for styling if needed
+
+	summaryBox := BoxStyle.Render("📊 Summary\n" + summary)
+
+	// List vulnerabilities
+	var vulnLines []string
+	if len(sec.Vulnerabilities) == 0 {
+		vulnLines = append(vulnLines, "✅ No known vulnerabilities found!")
+	} else {
+		vulnLines = append(vulnLines, "⚠️ Vulnerabilities Detected:\n")
+		maxShow := 10
+		if len(sec.Vulnerabilities) < maxShow {
+			maxShow = len(sec.Vulnerabilities)
+		}
+
+		for i := 0; i < maxShow; i++ {
+			v := sec.Vulnerabilities[i]
+			emoji := analyzer.GetSeverityEmoji(v.Severity)
+			line := fmt.Sprintf("%s %s - %s@%s", emoji, v.ID, v.Package, v.Version)
+			vulnLines = append(vulnLines, line)
+
+			if v.Summary != "" {
+				// Truncate summary if too long
+				summ := v.Summary
+				if len(summ) > 60 {
+					summ = summ[:57] + "..."
+				}
+				vulnLines = append(vulnLines, "   "+summ)
+			}
+
+			if v.FixedIn != "" {
+				vulnLines = append(vulnLines, fmt.Sprintf("   Fix: upgrade to %s", v.FixedIn))
+			}
+			vulnLines = append(vulnLines, "")
+		}
+
+		if len(sec.Vulnerabilities) > maxShow {
+			vulnLines = append(vulnLines, fmt.Sprintf("... and %d more vulnerabilities", len(sec.Vulnerabilities)-maxShow))
+		}
+	}
+
+	vulnBox := BoxStyle.Render(strings.Join(vulnLines, "\n"))
+
+	return lipgloss.JoinVertical(lipgloss.Left, header, summaryBox, vulnBox)
 }
 
 func (m DashboardModel) recruiterView() string {

@@ -19,6 +19,7 @@ type AnalysisResult struct {
 	MaturityScore int
 	MaturityLevel string
 	Dependencies  *analyzer.DependencyAnalysis
+	Security      *analyzer.SecurityScanResult
 }
 
 // CachedAnalysisResult wraps AnalysisResult with cache metadata
