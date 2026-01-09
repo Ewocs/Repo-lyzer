@@ -21,6 +21,7 @@ type AnalysisResult struct {
 	Dependencies         *analyzer.DependencyAnalysis
 	ContributorInsights  *analyzer.ContributorInsights
 	Security             *analyzer.SecurityScanResult
+	CodeQuality          *analyzer.CodeQualityMetrics
 }
 
 // CachedAnalysisResult wraps AnalysisResult with cache metadata
