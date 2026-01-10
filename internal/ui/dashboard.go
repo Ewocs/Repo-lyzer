@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/agnivo988/Repo-lyzer/internal/analyzer"
+	"github.com/agnivo988/Repo-lyzer/internal/github"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -717,28 +718,49 @@ Actions:
 func (m DashboardModel) apiStatusView() string {
 	header := TitleStyle.Render("🔐 GitHub API Status")
 
-	// Check if authenticated
-	mode := "Unauthenticated (60 req/hour)"
-	if m.data.Repo != nil && m.data.Repo.Private {
-		mode = "Authenticated (5000 req/hour)"
+	// Get rate limit info
+	client := github.NewClient()
+	rateLimit, err := client.GetRateLimit()
+
+	var rateLimitInfo string
+	if err != nil {
+		rateLimitInfo = "⚠️ Could not fetch rate limit info"
 	} else {
-		// Simple check - if we got detailed data, likely authenticated
-		if len(m.data.Contributors) > 30 {
-			mode = "Authenticated (5000 req/hour)"
-		}
+		status := rateLimit.GetRateLimitStatus()
+		resetTime := rateLimit.FormatResetTime()
+		usage := rateLimit.UsagePercent()
+
+		rateLimitInfo = fmt.Sprintf(
+			"Rate Limit Status: %s\n"+
+				"Requests: %d / %d (%.1f%% used)\n"+
+				"Resets in: %s",
+			status,
+			rateLimit.Resources.Core.Limit-rateLimit.Resources.Core.Remaining,
+			rateLimit.Resources.Core.Limit,
+			usage,
+			resetTime,
+		)
+	}
+
+	// Check authentication mode
+	mode := "🔴 Unauthenticated (60 req/hour)"
+	if client.HasToken() {
+		mode = "🟢 Authenticated (5000 req/hour)"
 	}
 
 	info := fmt.Sprintf(
-		"Mode: %s\n\n"+
+		"Authentication: %s\n\n"+
+			"%s\n\n"+
 			"Data Fetched:\n"+
 			"  • Repository info: ✓\n"+
 			"  • Commits (1 year): %d\n"+
 			"  • Contributors: %d\n"+
 			"  • Languages: %d\n"+
 			"  • File tree: %d entries\n\n"+
-			"Tip: Set GITHUB_TOKEN env variable\n"+
-			"for higher rate limits (5000/hour)",
+			"💡 Tip: Set GITHUB_TOKEN env variable\n"+
+			"   for higher rate limits (5000/hour)",
 		mode,
+		rateLimitInfo,
 		len(m.data.Commits),
 		len(m.data.Contributors),
 		len(m.data.Languages),
