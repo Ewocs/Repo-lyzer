@@ -284,7 +284,6 @@ func (m DashboardModel) renderTabs() string {
 	var tabs []string
 
 	for i, name := range views {
-		tab := fmt.Sprintf(" %d:%s ", (i+1)%10, name)
 		if dashboardView(i) == m.currentView {
 			tabs = append(tabs, SelectedStyle.Render(" "+name+" "))
 		} else {
@@ -485,8 +484,8 @@ func (m DashboardModel) dependenciesView() string {
 	return lipgloss.JoinVertical(lipgloss.Left, header, content)
 }
 
-func (m DashboardModel) dependenciesView() string {
-	header := TitleStyle.Render("📦 Dependencies")
+func (m DashboardModel) contributorInsightsView() string {
+	header := TitleStyle.Render("🔍 Contributor Insights")
 
 	insights := m.data.ContributorInsights
 	if insights == nil {
