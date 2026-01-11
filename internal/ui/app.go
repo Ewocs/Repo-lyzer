@@ -118,6 +118,14 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.String() == "q" && m.state == stateMenu {
 			return m, tea.Quit
 		}
+		// Ctrl+H → Open History from anywhere
+		if msg.String() == "ctrl+h" {
+			m.state = stateHistory
+			m.historyCursor = 0
+			history, _ := LoadHistory()
+			m.history = history
+			return m, nil
+		}
 
 	case string:
 		if msg == "switch_to_tree" {
@@ -603,6 +611,17 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case stateDashboard:
+		if key, ok := msg.(tea.KeyMsg); ok {
+			if key.String() == "." {
+				if m.dashboard.data.Repo != nil {
+					m.input = m.dashboard.data.Repo.FullName
+					m.state = stateLoading
+					cmds = append(cmds, m.analyzeRepo(m.input))
+					return m, tea.Batch(cmds...)
+				}
+			}
+		}
+
 		newDash, newCmd := m.dashboard.Update(msg)
 		m.dashboard = newDash.(DashboardModel)
 		cmds = append(cmds, newCmd)
@@ -612,7 +631,6 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.dashboard.BackToMenu = false
 			m.input = ""
 		}
-
 	case stateTree:
 		newTree, newCmd := m.tree.Update(msg)
 		m.tree = newTree.(TreeModel)
@@ -784,7 +802,7 @@ func (m MainModel) cloneRepo(repoName string) tea.Cmd {
 		// Clone the repository
 		repoURL := fmt.Sprintf("https://github.com/%s/%s.git", parts[0], parts[1])
 		cmd := exec.Command("git", "clone", repoURL, clonePath)
-		
+
 		if err := cmd.Run(); err != nil {
 			return cloneResult{err: fmt.Errorf("clone failed: %w", err)}
 		}
@@ -859,7 +877,6 @@ func (m MainModel) analyzeRepo(repoName string) tea.Cmd {
 		busFactor, busRisk := analyzer.BusFactor(contributors)
 		maturityScore, maturityLevel := analyzer.RepoMaturityScore(repo, len(commits), len(contributors), false)
 
-		
 		// Stage 6: Analyze dependencies and contributor insights
 		deps, _ := analyzer.AnalyzeDependencies(client, parts[0], parts[1], repo.DefaultBranch, fileTree)
 		contributorInsights := analyzer.AnalyzeContributors(contributors)
@@ -1315,6 +1332,8 @@ func (m MainModel) helpView() string {
 	case "shortcuts":
 		title = "❓ Keyboard Shortcuts"
 		content = `
+Global:
+  Ctrl+H        Open analysis history
 Main Menu:
   ↑↓/jk         Navigate menu
   Enter         Select option
@@ -1336,6 +1355,7 @@ Dashboard Navigation:
   r             Refresh data
   ?/h           Toggle help
   q/ESC         Go back
+   .            Re-analyze current repository
 
 File Tree:
   ↑↓/jk         Navigate files
@@ -1449,7 +1469,7 @@ func (m MainModel) settingsView() string {
 	switch m.settingsOption {
 	case "theme":
 		title = "🎨 Theme Settings"
-		
+
 		// Build theme list with current indicator
 		themeList := ""
 		for i, theme := range AvailableThemes {
@@ -1459,7 +1479,7 @@ func (m MainModel) settingsView() string {
 			}
 			themeList += fmt.Sprintf("  %s[%d] %s\n", indicator, i+1, theme.Name)
 		}
-		
+
 		content = fmt.Sprintf(`
 Current theme: %s
 
@@ -1473,13 +1493,13 @@ Theme changes are applied immediately!
 `, CurrentTheme.Name, themeList)
 	case "cache":
 		title = "� Cachre Settings"
-		
+
 		// Get cache stats
 		cacheInfo := "Cache not initialized"
 		if m.cache != nil {
 			stats := m.cache.GetStats()
 			cfg := m.cache.GetConfig()
-			
+
 			enabledStr := "Disabled"
 			if cfg.Enabled {
 				enabledStr = "Enabled"
@@ -1488,7 +1508,7 @@ Theme changes are applied immediately!
 			if cfg.AutoCache {
 				autoStr = "On"
 			}
-			
+
 			cacheInfo = fmt.Sprintf(`
 Status: %s
 Auto-cache: %s
