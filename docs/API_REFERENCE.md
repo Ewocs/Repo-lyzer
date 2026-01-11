@@ -28,6 +28,11 @@ func NewClient() *Client
 **Returns:**
 - `*Client`: A pointer to a new Client instance
 
+**Notes:**
+- Reads the authentication token from the `GITHUB_TOKEN` environment variable
+- Callers must set the `GITHUB_TOKEN` environment variable prior to constructing a client
+- Uses the value of `GITHUB_TOKEN` as the API authentication token
+
 **Example:**
 ```go
 client := github.NewClient()

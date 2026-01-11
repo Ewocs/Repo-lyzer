@@ -10,10 +10,6 @@ import (
 // ResponsiveLayout handles responsive design for different terminal sizes
 type ResponsiveLayout struct {
 	Width  int
-}
-// ResponsiveLayout manages responsive UI layout calculations
-type ResponsiveLayout struct {
-	Width  int
 	Height int
 }
 
