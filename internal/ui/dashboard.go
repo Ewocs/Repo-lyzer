@@ -123,6 +123,17 @@ func (m DashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return exportMsg{nil, "✓ Exported to analysis.md"}
 				}
 			}
+			
+		case "p":
+			if m.showExport {
+				return m, func() tea.Msg {
+					_,err := ExportPDF(m.data, "analysis.pdf")
+					if err != nil {
+						return exportMsg{err, ""}
+					}
+					return exportMsg{nil, "✓ Exported to analysis.pdf"}
+				}
+			}
 
 		case "f":
 			return m, func() tea.Msg { return "switch_to_tree" }
@@ -248,7 +259,7 @@ func (m DashboardModel) View() string {
 		content = lipgloss.JoinVertical(
 			lipgloss.Left,
 			content,
-			BoxStyle.Render("📥 Export:\n[J] JSON  [M] Markdown"),
+			BoxStyle.Render("📥 Export:\n[J] JSON  [M] Markdown  [P] PDF"),
 		)
 	}
 
@@ -451,7 +462,7 @@ func boolToYesNo(b bool) string {
 }
 
 func (m DashboardModel) dependenciesView() string {
-	header := TitleStyle.Render("� Dependenrcies")
+	header := TitleStyle.Render("📦 Dependencies")
 
 	if m.data.Dependencies == nil || len(m.data.Dependencies.Files) == 0 {
 		return lipgloss.JoinVertical(lipgloss.Left, header, BoxStyle.Render("No dependency files found"))
@@ -659,7 +670,7 @@ func (m DashboardModel) recruiterView() string {
 			"👥 Contributors: %d\n"+
 			"🏗️ Maturity: %s (%d)\n"+
 			"⚠️ Bus Factor: %d - %s\n"+
-			"� Activity: %s\n"+
+			" Activity: %s\n"+
 			"💚 Health Score: %d/100",
 		m.data.Repo.FullName,
 		m.data.Repo.Stars,
@@ -699,6 +710,7 @@ Actions:
   e             Toggle export menu
   j             Export to JSON (when export menu open)
   m             Export to Markdown (when export menu open)
+  p             Export to PDF (when export menu open)
   f             Open file tree
   r             Refresh data
   ?/h           Toggle this help

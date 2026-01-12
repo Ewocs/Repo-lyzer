@@ -8,7 +8,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"time"
+	"time" 
+	"github.com/jung-kurt/gofpdf"
 )
 
 // ExportData is the structure for JSON export with additional metadata
@@ -62,7 +63,6 @@ func openFileManager(filePath string) error {
 	switch runtime.GOOS {
 	case "windows":
 		// Windows: use explorer with /select to highlight the file
-		// Path must be concatenated with /select, flag (no space)
 		cmd = exec.Command("explorer", "/select,"+filePath)
 	case "darwin":
 		// macOS: use open with -R to reveal in Finder
@@ -80,7 +80,6 @@ func openFileManager(filePath string) error {
 
 // generateFilename creates a filename with repo name and timestamp
 func generateFilename(repoName, ext string) string {
-	// Replace / with _ for filename
 	safeName := strings.ReplaceAll(repoName, "/", "_")
 	timestamp := time.Now().Format("2006-01-02_15-04-05")
 	return fmt.Sprintf("%s_%s.%s", safeName, timestamp, ext)
@@ -94,7 +93,6 @@ func ExportJSON(data AnalysisResult, _ string) (string, error) {
 
 	filename := filepath.Join(downloadsDir, generateFilename(data.Repo.FullName, "json"))
 
-	// Build top contributors (max 10)
 	var topContribs []ContributorExport
 	maxContribs := 10
 	if len(data.Contributors) < maxContribs {
@@ -144,7 +142,6 @@ func ExportJSON(data AnalysisResult, _ string) (string, error) {
 		return "", err
 	}
 
-	// Open file manager (ignore error - export succeeded even if reveal fails)
 	_ = openFileManager(filename)
 
 	return filename, nil
@@ -207,7 +204,103 @@ func ExportMarkdown(data AnalysisResult, _ string) (string, error) {
 		return "", err
 	}
 
-	// Open file manager (ignore error - export succeeded even if reveal fails)
+	_ = openFileManager(filename)
+
+	return filename, nil
+}
+
+func ExportPDF(data AnalysisResult, _ string) (string, error) {
+	downloadsDir, err := getDownloadsDir()
+	if err != nil {
+		return "", err
+	}
+
+	filename := filepath.Join(downloadsDir, generateFilename(data.Repo.FullName, "pdf"))
+
+	pdf := gofpdf.New("P", "mm", "A4", "")
+	pdf.AddPage()
+	
+	pdf.SetFont("Arial", "B", 16)
+	pdf.Cell(0, 10, "Analysis for "+data.Repo.FullName)
+	pdf.Ln(12)
+
+	pdf.SetFont("Arial", "I", 10)
+	pdf.Cell(0, 10, fmt.Sprintf("Exported: %s", time.Now().Format("2006-01-02 15:04")))
+	pdf.Ln(15)
+
+	pdf.SetFont("Arial", "B", 14)
+	pdf.Cell(0, 10, "Repository Info")
+	pdf.Ln(10)
+
+	pdf.SetFont("Arial", "", 11)
+	pdf.Cell(0, 8, fmt.Sprintf("Stars: %d", data.Repo.Stars))
+	pdf.Ln(6)
+	pdf.Cell(0, 8, fmt.Sprintf("Forks: %d", data.Repo.Forks))
+	pdf.Ln(6)
+	pdf.Cell(0, 8, fmt.Sprintf("Open Issues: %d", data.Repo.OpenIssues))
+	pdf.Ln(6)
+	pdf.Cell(0, 8, fmt.Sprintf("Created: %s", data.Repo.CreatedAt.Format("2006-01-02")))
+	pdf.Ln(6)
+	pdf.Cell(0, 8, fmt.Sprintf("URL: %s", data.Repo.HTMLURL))
+	pdf.Ln(15)
+
+	pdf.SetFont("Arial", "B", 14)
+	pdf.Cell(0, 10, "Metrics")
+	pdf.Ln(10)
+
+	pdf.SetFont("Arial", "", 11)
+	pdf.Cell(0, 8, fmt.Sprintf("Health Score: %d/100", data.HealthScore))
+	pdf.Ln(6)
+	pdf.Cell(0, 8, fmt.Sprintf("Bus Factor: %d (%s)", data.BusFactor, data.BusRisk))
+	pdf.Ln(6)
+	pdf.Cell(0, 8, fmt.Sprintf("Maturity: %s (%d)", data.MaturityLevel, data.MaturityScore))
+	pdf.Ln(6)
+	pdf.Cell(0, 8, fmt.Sprintf("Commits (1 year): %d", len(data.Commits)))
+	pdf.Ln(6)
+	pdf.Cell(0, 8, fmt.Sprintf("Contributors: %d", len(data.Contributors)))
+	pdf.Ln(15)
+
+	pdf.SetFont("Arial", "B", 14)
+	pdf.Cell(0, 10, "Languages")
+	pdf.Ln(10)
+
+	pdf.SetFont("Arial", "", 11)
+	total := 0
+	for _, bytes := range data.Languages {
+		total += bytes
+	}
+		if total == 0 {  
+		pdf.Cell(0, 8, "No language data available")  
+		pdf.Ln(6)  
+	} else {  
+		for lang, bytes := range data.Languages {  
+			pct := float64(bytes) / float64(total) * 100  
+			pdf.Cell(0, 8, fmt.Sprintf("- %s: %.1f%%", lang, pct))  
+			pdf.Ln(6)  
+		}  
+	}  
+	pdf.Ln(9)
+
+	pdf.SetFont("Arial", "B", 14)
+	pdf.Cell(0, 10, "Top Contributors")
+	pdf.Ln(10)
+
+	pdf.SetFont("Arial", "", 11)
+	maxContribs := 10
+	if len(data.Contributors) < maxContribs {
+		maxContribs = len(data.Contributors)
+	}
+	for i := 0; i < maxContribs; i++ {
+		c := data.Contributors[i]
+		pdf.Cell(0, 8, fmt.Sprintf("%d. %s (%d commits)", i+1, c.Login, c.Commits))
+		pdf.Ln(6)
+	}
+
+	err = pdf.OutputFileAndClose(filename)
+	if err != nil {
+		return "", err
+	}
+
 	_ = openFileManager(filename)
 
 	return filename, nil
@@ -266,13 +359,11 @@ func ExportCompareJSON(data CompareResult) (string, error) {
 		return "", err
 	}
 
-	// Generate filename with both repo names
 	safeName1 := strings.ReplaceAll(data.Repo1.Repo.FullName, "/", "_")
 	safeName2 := strings.ReplaceAll(data.Repo2.Repo.FullName, "/", "_")
 	timestamp := time.Now().Format("2006-01-02_15-04-05")
 	filename := filepath.Join(downloadsDir, fmt.Sprintf("compare_%s_vs_%s_%s.json", safeName1, safeName2, timestamp))
 
-	// Determine verdict
 	var verdict string
 	if data.Repo1.MaturityScore > data.Repo2.MaturityScore {
 		verdict = fmt.Sprintf("%s appears more mature and stable", data.Repo1.Repo.FullName)
@@ -301,7 +392,6 @@ func ExportCompareJSON(data CompareResult) (string, error) {
 		return "", err
 	}
 
-	// Open file manager (ignore error - export succeeded even if reveal fails)
 	_ = openFileManager(filename)
 
 	return filename, nil
@@ -355,7 +445,6 @@ func ExportCompareMarkdown(data CompareResult) (string, error) {
 		return "", err
 	}
 
-	// Open file manager (ignore error - export succeeded even if reveal fails)
 	_ = openFileManager(filename)
 
 	return filename, nil
