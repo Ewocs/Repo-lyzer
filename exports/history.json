@@ -1,3 +1,20 @@
 {
-  "entries": []
+  "entries": [
+    {
+      "repo_name": "GauravKarakoti/SwapSmith",
+      "analyzed_at": "2026-01-12T15:29:25.734128386Z",
+      "health_score": 80,
+      "stars": 0,
+      "forks": 0,
+      "maturity_level": "Prototype"
+    },
+    {
+      "repo_name": "GauravKarakoti/FinovatePay",
+      "analyzed_at": "2026-01-12T15:27:20.185792452Z",
+      "health_score": 80,
+      "stars": 0,
+      "forks": 1,
+      "maturity_level": "Prototype"
+    }
+  ]
 }
