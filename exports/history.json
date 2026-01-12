@@ -1,3 +1,12 @@
 {
-  "entries": []
+  "entries": [
+    {
+      "repo_name": "GauravKarakoti/BrainBytes",
+      "analyzed_at": "2026-01-12T12:34:20.814571544Z",
+      "health_score": 70,
+      "stars": 2,
+      "forks": 15,
+      "maturity_level": "Prototype"
+    }
+  ]
 }
