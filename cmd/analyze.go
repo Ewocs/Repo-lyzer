@@ -27,17 +27,85 @@ func RunAnalyze(owner, repo string) error {
 	return analyzeCmd.Execute()
 }
 
-// runDryRun performs a dry run of the analysis, validating the repository URL
-// and displaying what metrics would be calculated without making API calls.
-func runDryRun(owner, repo string) error {
-	fmt.Printf("🔍 Dry Run Mode - Validating repository: %s/%s\n\n", owner, repo)
-
-	// Basic validation
-	if owner == "" || repo == "" {
-		return fmt.Errorf("invalid repository format: owner and repo cannot be empty")
+// validateRepoURL validates the repository URL format and provides clear error messages
+func validateRepoURL(repoArg string) (owner, repo string, err error) {
+	if repoArg == "" {
+		return "", "", fmt.Errorf("repository URL cannot be empty")
 	}
 
-	fmt.Println("✅ Repository URL format is valid")
+	if strings.Contains(repoArg, " ") {
+		return "", "", fmt.Errorf("repository URL cannot contain spaces")
+	}
+
+	parts := strings.Split(repoArg, "/")
+	if len(parts) != 2 {
+		return "", "", fmt.Errorf("repository must be in 'owner/repo' format (found %d parts separated by '/')", len(parts))
+	}
+
+	owner, repo = parts[0], parts[1]
+
+	if owner == "" {
+		return "", "", fmt.Errorf("owner name cannot be empty")
+	}
+
+	if repo == "" {
+		return "", "", fmt.Errorf("repository name cannot be empty")
+	}
+
+	// Basic validation for GitHub username/repo name patterns
+	if len(owner) > 39 {
+		return "", "", fmt.Errorf("owner name is too long (maximum 39 characters)")
+	}
+
+	if len(owner) < 1 {
+		return "", "", fmt.Errorf("owner name is too short (minimum 1 character)")
+	}
+
+	if strings.HasPrefix(owner, "-") || strings.HasSuffix(owner, "-") {
+		return "", "", fmt.Errorf("owner name cannot start or end with a hyphen")
+	}
+
+	if strings.Contains(owner, "--") {
+		return "", "", fmt.Errorf("owner name cannot contain consecutive hyphens")
+	}
+
+	// Check for valid characters (alphanumeric, hyphens)
+	for _, char := range owner {
+		if !((char >= 'a' && char <= 'z') || (char >= 'A' && char <= 'Z') || (char >= '0' && char <= '9') || char == '-') {
+			return "", "", fmt.Errorf("owner name contains invalid character '%c' (only alphanumeric characters and hyphens allowed)", char)
+		}
+	}
+
+	if len(repo) > 100 {
+		return "", "", fmt.Errorf("repository name is too long (maximum 100 characters)")
+	}
+
+	if len(repo) < 1 {
+		return "", "", fmt.Errorf("repository name is too short (minimum 1 character)")
+	}
+
+	// Repository names can contain more characters than usernames
+	for _, char := range repo {
+		if char == ' ' || char == '\t' || char == '\n' || char == '\r' {
+			return "", "", fmt.Errorf("repository name cannot contain whitespace")
+		}
+	}
+
+	return owner, repo, nil
+}
+
+// runDryRun performs a dry run of the analysis, validating the repository URL
+// and displaying what metrics would be calculated without making API calls.
+func runDryRun(repoArg string) error {
+	fmt.Printf("🔍 Dry Run Mode - Validating repository: %s\n\n", repoArg)
+
+	// Use the same validation as the full run
+	owner, repo, err := validateRepoURL(repoArg)
+	if err != nil {
+		return fmt.Errorf("invalid repository URL: %w", err)
+	}
+
+	fmt.Printf("✅ Repository URL format is valid: %s/%s\n", owner, repo)
 	fmt.Println("📊 The following metrics would be calculated:")
 	fmt.Println("  • Repository information (stars, forks, description, etc.)")
 	fmt.Println("  • Programming languages used")
@@ -70,21 +138,21 @@ var analyzeCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
 
-		// Parse the repository argument into owner and repo parts
-		parts := strings.Split(args[0], "/")
-		if len(parts) != 2 {
-			return fmt.Errorf("repository must be in owner/repo format")
+		if dryRun {
+			return runDryRun(args[0])
 		}
 
-		if dryRun {
-			return runDryRun(parts[0], parts[1])
+		// Validate the repository URL format
+		owner, repo, err := validateRepoURL(args[0])
+		if err != nil {
+			return fmt.Errorf("invalid repository URL: %w", err)
 		}
 
 		// Initialize GitHub client
 		client := github.NewClient()
 
 		// Fetch repository information
-		repo, err := client.GetRepo(parts[0], parts[1])
+		repoInfo, err := client.GetRepo(owner, repo)
 		if err != nil {
 			// Check if it's a private repo error and no token is set
 			if strings.Contains(err.Error(), "repository not found") && !client.HasToken() {
@@ -95,7 +163,7 @@ var analyzeCmd = &cobra.Command{
 					if token != "" {
 						client.SetToken(token)
 						// Retry fetching the repo with the token
-						repo, err = client.GetRepo(parts[0], parts[1])
+						repoInfo, err = client.GetRepo(owner, repo)
 						if err != nil {
 							return fmt.Errorf("failed to access repository even with token: %w", err)
 						}
@@ -111,25 +179,25 @@ var analyzeCmd = &cobra.Command{
 		}
 
 		// Fetch programming languages used in the repository
-		langs, err := client.GetLanguages(parts[0], parts[1])
+		langs, err := client.GetLanguages(owner, repo)
 		if err != nil {
 			return fmt.Errorf("failed to get languages: %w", err)
 		}
 
 		// Fetch commits from the last 365 days
-		commits, err := client.GetCommits(parts[0], parts[1], 365)
+		commits, err := client.GetCommits(owner, repo, 365)
 		if err != nil {
 			return fmt.Errorf("failed to get commits: %w", err)
 		}
 
 		// Calculate repository health score
-		score := analyzer.CalculateHealth(repo, commits)
+		score := analyzer.CalculateHealth(repoInfo, commits)
 
 		// Analyze commit activity per day
 		activity := analyzer.CommitsPerDay(commits)
 
 		// Fetch contributors
-		contributors, err := client.GetContributors(parts[0], parts[1])
+		contributors, err := client.GetContributors(owner, repo)
 		if err != nil {
 			return err
 		}
@@ -140,7 +208,7 @@ var analyzeCmd = &cobra.Command{
 		// Calculate repository maturity score and level
 		maturityScore, maturityLevel :=
 			analyzer.RepoMaturityScore(
-				repo,
+				repoInfo,
 				len(commits),
 				len(contributors),
 				false, // Assuming no releases check for simplicity
@@ -148,9 +216,9 @@ var analyzeCmd = &cobra.Command{
 
 		// Build recruiter summary
 		summary := analyzer.BuildRecruiterSummary(
-			repo.FullName,
-			repo.Forks,
-			repo.Stars,
+			repoInfo.FullName,
+			repoInfo.Forks,
+			repoInfo.Stars,
 			len(commits),
 			len(contributors),
 			maturityScore,
@@ -160,7 +228,7 @@ var analyzeCmd = &cobra.Command{
 		)
 
 		// Output the analysis results
-		output.PrintRepo(repo)
+		output.PrintRepo(repoInfo)
 		output.PrintLanguages(langs)
 		output.PrintCommitActivity(activity, 14)
 		output.PrintHealth(score)
