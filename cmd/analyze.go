@@ -43,7 +43,7 @@ var analyzeCmd = &cobra.Command{
 		// Parse the repository argument into owner and repo parts
 		parts := strings.Split(args[0], "/")
 		if len(parts) != 2 {
-			return fmt.Errorf("repository must be in owner/repo format")
+			return fmt.Errorf("invalid repository URL: must be in owner/repo format or a valid GitHub URL")
 		}
 
 		// Initialize GitHub client

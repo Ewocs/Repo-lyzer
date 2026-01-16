@@ -1,9 +1,10 @@
-# Fix Keyboard Shortcuts in Dashboard Footer
+# Fix Error Message for Invalid Repository URLs
 
 ## Tasks
-- [x] Replace hardcoded footer in dashboard.go with dynamic shortcuts using FormatShortcutsCompact(GetDashboardShortcuts())
+- [x] Update error messages in cmd/analyze.go, internal/ui/app.go for invalid repository URL format
+- [x] Ensure consistent error messaging across CLI and UI interfaces
 
 ## Status
-- Analysis complete: Footer is hardcoded instead of using the shortcuts system
-- Plan approved: Use FormatShortcutsCompact(GetDashboardShortcuts()) for dynamic footer
-- Implementation complete: Footer now uses dynamic shortcuts system
+- Analysis complete: Error messages were too generic and didn't clearly indicate invalid URL format
+- Plan approved: Update error messages to be more descriptive about valid formats
+- Implementation complete: Error messages now clearly state "invalid repository URL: must be in owner/repo format or a valid GitHub URL"
