@@ -322,13 +322,17 @@ func (m DashboardModel) overviewView() string {
 		lipgloss.NewStyle().Bold(true).Render("Activity Trend"),
 		"\n"+chart,
 	))
+	riskPanel := m.riskAlertsView()
 
 	return lipgloss.JoinVertical(
 		lipgloss.Left,
 		lipgloss.JoinHorizontal(lipgloss.Center, header, subHeader),
 		"\n",
 		lipgloss.JoinHorizontal(lipgloss.Top, metricsBox, chartBox),
+		"\n",
+		riskPanel,
 	)
+
 }
 
 func (m DashboardModel) repoView() string {
@@ -664,6 +668,27 @@ func (m DashboardModel) recruiterView() string {
 	)
 
 	return lipgloss.JoinVertical(lipgloss.Left, header, CardStyle.Render(summary))
+}
+
+func (m DashboardModel) riskAlertsView() string {
+	alerts := m.data.RiskAlerts
+
+	if alerts == nil || len(alerts.Alerts) == 0 {
+		return ""
+	}
+
+	header := TitleStyle.Render(" ⚠ Risk Alerts ")
+
+	var lines string
+	for _, a := range alerts.Alerts {
+		lines += "• " + a + "\n"
+	}
+
+	return lipgloss.JoinVertical(
+		lipgloss.Left,
+		header,
+		CardStyle.Render(lines),
+	)
 }
 
 func (m DashboardModel) apiStatusView() string {

@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/agnivo988/Repo-lyzer/internal/analyzer"
 	"github.com/agnivo988/Repo-lyzer/internal/cache"
@@ -983,6 +984,20 @@ func (m MainModel) analyzeRepo(repoName string) tea.Cmd {
 
 		// Mark complete
 		tracker.NextStage()
+		commitsLast90Days := 0
+		cutoff := time.Now().AddDate(0, 0, -90)
+
+		for _, c := range commits {
+			if c.Commit.Author.Date.After(cutoff) {
+				commitsLast90Days++
+			}
+		}
+		riskAlerts := analyzer.AnalyzeRiskAlerts(
+			busFactor,
+			score,
+			commitsLast90Days,
+			security != nil && security.CriticalCount > 0,
+		)
 
 		result := AnalysisResult{
 			Repo:                repo,
@@ -999,6 +1014,7 @@ func (m MainModel) analyzeRepo(repoName string) tea.Cmd {
 			ContributorInsights: contributorInsights,
 			Security:            security,
 			ContributorActivity: analyzer.AnalyzeContributorActivity(commits),
+			RiskAlerts:          riskAlerts,
 		}
 
 		// Save to cache
