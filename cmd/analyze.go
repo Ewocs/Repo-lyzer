@@ -27,6 +27,34 @@ func RunAnalyze(owner, repo string) error {
 	return analyzeCmd.Execute()
 }
 
+// runDryRun performs a dry run of the analysis, validating the repository URL
+// and displaying what metrics would be calculated without making API calls.
+func runDryRun(owner, repo string) error {
+	fmt.Printf("🔍 Dry Run Mode - Validating repository: %s/%s\n\n", owner, repo)
+
+	// Basic validation
+	if owner == "" || repo == "" {
+		return fmt.Errorf("invalid repository format: owner and repo cannot be empty")
+	}
+
+	fmt.Println("✅ Repository URL format is valid")
+	fmt.Println("📊 The following metrics would be calculated:")
+	fmt.Println("  • Repository information (stars, forks, description, etc.)")
+	fmt.Println("  • Programming languages used")
+	fmt.Println("  • Commit activity over the last 365 days")
+	fmt.Println("  • Repository health score")
+	fmt.Println("  • Daily commit activity (last 14 days)")
+	fmt.Println("  • Contributor information")
+	fmt.Println("  • Bus factor and risk assessment")
+	fmt.Println("  • Repository maturity score and level")
+	fmt.Println("  • Recruiter summary with key insights")
+	fmt.Println()
+	fmt.Println("💡 This dry run does not consume API rate limits or perform actual computations.")
+	fmt.Println("   Run without --dry-run to execute the full analysis.")
+
+	return nil
+}
+
 
 // analyzeCmd defines the "analyze" command for the CLI.
 // It analyzes a single GitHub repository and prints various metrics and reports.
@@ -40,10 +68,16 @@ var analyzeCmd = &cobra.Command{
 	Short: "Analyze a GitHub repository",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		dryRun, _ := cmd.Flags().GetBool("dry-run")
+
 		// Parse the repository argument into owner and repo parts
 		parts := strings.Split(args[0], "/")
 		if len(parts) != 2 {
 			return fmt.Errorf("repository must be in owner/repo format")
+		}
+
+		if dryRun {
+			return runDryRun(parts[0], parts[1])
 		}
 
 		// Initialize GitHub client
@@ -135,4 +169,9 @@ var analyzeCmd = &cobra.Command{
 
 		return nil
 	},
+}
+
+func init() {
+	rootCmd.AddCommand(analyzeCmd)
+	analyzeCmd.Flags().Bool("dry-run", false, "Validate repository URL and show what metrics would be calculated without making API calls")
 }
