@@ -1052,6 +1052,37 @@ func (m MainModel) compareResultView() string {
 
 	header := TitleStyle.Render(fmt.Sprintf("📊 Comparison: %s vs %s", r1.Repo.FullName, r2.Repo.FullName))
 
+	// Check if repositories are identical
+	if r1.Repo.Stars == r2.Repo.Stars &&
+		r1.Repo.Forks == r2.Repo.Forks &&
+		len(r1.Commits) == len(r2.Commits) &&
+		len(r1.Contributors) == len(r2.Contributors) &&
+		r1.BusFactor == r2.BusFactor &&
+		r1.MaturityScore == r2.MaturityScore {
+
+		noDiffBox := BoxStyle.Render("✅ No differences found between the two repositories.\nBoth repositories have identical metrics.")
+		footer := SubtleStyle.Render("j: export JSON • m: export Markdown • q/ESC: back to menu")
+
+		content := lipgloss.JoinVertical(
+			lipgloss.Left,
+			header,
+			noDiffBox,
+			footer,
+		)
+
+		if m.windowWidth == 0 {
+			return content
+		}
+
+		return lipgloss.Place(
+			m.windowWidth,
+			m.windowHeight,
+			lipgloss.Center,
+			lipgloss.Center,
+			content,
+		)
+	}
+
 	// Build comparison table
 	rows := []string{
 		fmt.Sprintf("%-20s │ %-25s │ %-25s", "Metric", r1.Repo.FullName, r2.Repo.FullName),

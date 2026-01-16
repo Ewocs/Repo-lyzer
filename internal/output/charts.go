@@ -34,6 +34,11 @@ func barColor(count, max int) lipgloss.Style {
 func PrintCommitActivity(data map[string]int, maxDays int) {
 	fmt.Println(SectionStyle.Render("\n📈 Commit Activity"))
 
+	if len(data) == 0 {
+		fmt.Println("No commit activity found in the specified period.")
+		return
+	}
+
 	dates := make([]string, 0, len(data))
 	for d := range data {
 		dates = append(dates, d)

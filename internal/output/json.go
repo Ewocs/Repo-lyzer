@@ -11,6 +11,11 @@ func PrintLanguages(langs map[string]int) {
 
 	fmt.Println(SectionStyle.Render("\n⛳ Language Breakdown"))
 
+	if len(langs) == 0 {
+		fmt.Println("No language data available.")
+		return
+	}
+
 	total := 0
 	for _, v := range langs {
 		total += v
