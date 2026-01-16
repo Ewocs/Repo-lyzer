@@ -54,7 +54,7 @@ func (m MenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "up", "k":
+		case "up", "k", "w", "W":
 			if m.inSubmenu {
 				if m.submenuCursor > 0 {
 					m.submenuCursor--
@@ -70,7 +70,7 @@ func (m MenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.cursor = len(m.choices) - 1
 				}
 			}
-		case "down", "j":
+		case "down", "j", "s", "S":
 			if m.inSubmenu {
 				if m.submenuCursor < len(m.submenuChoices)-1 {
 					m.submenuCursor++
@@ -155,7 +155,7 @@ func (m MenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.cursor = 1
 				m.enterSubmenu()
 			}
-		case "h":
+		case "h", "H":
 			// Quick access: History
 			if !m.inSubmenu {
 				m.cursor = 2
@@ -279,16 +279,16 @@ func (m MenuModel) submenuView() string {
 	switch m.submenuType {
 	case "analyze":
 		title = "📊 ANALYSIS TYPE"
-		hint = "↑↓/jk: navigate • 1-3: jump • Enter/Space: select • Esc/q: back"
+		hint = "↑↓/jk/ws: navigate • 1-3: jump • Enter/Space: select • Esc/q: back"
 	case "settings":
 		title = "⚙️ SETTINGS"
-		hint = "↑↓/jk: navigate • 1-5: jump • Enter/Space: select • Esc/q: back"
+		hint = "↑↓/jk/ws: navigate • 1-5: jump • Enter/Space: select • Esc/q: back"
 	case "help":
 		title = "❓ HELP MENU"
-		hint = "↑↓/jk: navigate • 1-4: jump • Enter/Space: select • Esc/q: back"
+		hint = "↑↓/jk/ws: navigate • 1-4: jump • Enter/Space: select • Esc/q: back"
 	default:
 		title = "SUBMENU"
-		hint = "↑↓/jk: navigate • Enter/Space: select • Esc/q: back"
+		hint = "↑↓/jk/ws: navigate • Enter/Space: select • Esc/q: back"
 	}
 
 	content := TitleStyle.Render(title) + "\n\n"

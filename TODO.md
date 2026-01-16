@@ -1,6 +1,7 @@
-# TODO: Fix Private Repository Analysis Error
+# Fix Menu Navigation in Certain Terminals
 
 ## Tasks
-- [x] Add SetToken method to Client struct in internal/github/client.go
-- [x] Modify analyzeCmd in cmd/analyze.go to prompt for GitHub token when accessing private repos
-- [ ] Test the fix by analyzing a private repository (requires Go environment)
+- [x] Add WASD-style navigation keys (w/W for up, s/S for down)
+- [x] Add "H" as alternative to "h" for history quick access
+- [x] Update help text to include new key options
+- [x] Test the changes
