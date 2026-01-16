@@ -4,8 +4,9 @@ import "fmt"
 
 // Contributor represents a GitHub contributor
 type Contributor struct {
-	Login   string `json:"login"`
-	Commits int    `json:"contributions"`
+	Login      string `json:"login"`
+	Commits    int    `json:"contributions"`
+	AvatarURL  string `json:"avatar_url"`
 }
 
 // GetContributors fetches ALL contributors (paginated)

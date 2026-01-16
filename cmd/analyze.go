@@ -231,6 +231,7 @@ var analyzeCmd = &cobra.Command{
 		output.PrintRepo(repoInfo)
 		output.PrintLanguages(langs)
 		output.PrintCommitActivity(activity, 14)
+		output.PrintContributors(contributors)
 		output.PrintHealth(score)
 		output.PrintGitHubAPIStatus(client)
 		output.PrintRecruiterSummary(summary)
