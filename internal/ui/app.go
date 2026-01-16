@@ -57,18 +57,18 @@ type MainModel struct {
 	windowHeight    int
 	analysisType    string // quick, detailed, custom
 	appSettings     tea.LogOptionsSetter
-	compareResult   *CompareResult // Holds comparison data
-	history         *History       // Analysis history
-	historyCursor   int            // Current selection in history
-	helpContent     string         // Content for help screen
-	settingsOption  string         // Selected settings option
-	cache           *cache.Cache       // Offline cache for analysis results
-	cacheStatus     string             // Cache status: "fresh", "cached", "expired", ""
-	favorites       *Favorites         // Favorite repositories
-	favoritesCursor int                // Current selection in favorites
+	compareResult   *CompareResult      // Holds comparison data
+	history         *History            // Analysis history
+	historyCursor   int                 // Current selection in history
+	helpContent     string              // Content for help screen
+	settingsOption  string              // Selected settings option
+	cache           *cache.Cache        // Offline cache for analysis results
+	cacheStatus     string              // Cache status: "fresh", "cached", "expired", ""
+	favorites       *Favorites          // Favorite repositories
+	favoritesCursor int                 // Current selection in favorites
 	appConfig       *config.AppSettings // Application settings
-	tokenInput      string             // Buffer for token input
-	inTokenInput    bool               // Whether currently inputting token
+	tokenInput      string              // Buffer for token input
+	inTokenInput    bool                // Whether currently inputting token
 }
 
 // NewMainModel creates a new main application model with default settings.
@@ -92,13 +92,13 @@ func NewMainModel() MainModel {
 	}
 
 	return MainModel{
-		state:       stateMenu,
-		menu:        NewMenuModel(),
-		spinner:     s,
-		dashboard:   NewDashboardModel(),
-		tree:        NewTreeModel(nil),
-		cache:       repoCache,
-		appConfig:   appConfig,
+		state:     stateMenu,
+		menu:      NewMenuModel(),
+		spinner:   s,
+		dashboard: NewDashboardModel(),
+		tree:      NewTreeModel(nil),
+		cache:     repoCache,
+		appConfig: appConfig,
 	}
 }
 
@@ -143,7 +143,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.history = history
 			return m, nil
 		}
-	
+
 	case struct{}:
 		if m.state == stateLoading || m.state == stateCompareLoading {
 			m.animTick++
@@ -779,7 +779,7 @@ func (m MainModel) View() string {
 		}
 
 		statusView := fmt.Sprintf("%s %s...", m.spinner.View(), loadMsg)
-		
+
 		if len(SatelliteFrames) > 0 {
 			frame := SatelliteFrames[m.animTick%len(SatelliteFrames)]
 			statusView += "\n" + lipgloss.NewStyle().Foreground(lipgloss.Color("#00E5FF")).Render(frame)
@@ -814,12 +814,12 @@ func (m MainModel) View() string {
 	case stateCompareLoading:
 		loadMsg := fmt.Sprintf("📊 Comparing %s vs %s", m.compareInput1, m.compareInput2)
 		statusView := fmt.Sprintf("%s %s...", m.spinner.View(), loadMsg)
-		
+
 		if len(SatelliteFrames) > 0 {
 			frame := SatelliteFrames[m.animTick%len(SatelliteFrames)]
 			statusView += "\n" + lipgloss.NewStyle().Foreground(lipgloss.Color("#00E5FF")).Render(frame)
 		}
-		
+
 		statusView += "\n\n" + SubtleStyle.Render("Press ESC to cancel")
 
 		return lipgloss.Place(
@@ -998,6 +998,7 @@ func (m MainModel) analyzeRepo(repoName string) tea.Cmd {
 			Dependencies:        deps,
 			ContributorInsights: contributorInsights,
 			Security:            security,
+			ContributorActivity: analyzer.AnalyzeContributorActivity(commits),
 		}
 
 		// Save to cache

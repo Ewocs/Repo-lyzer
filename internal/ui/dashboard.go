@@ -22,6 +22,7 @@ const (
 	viewActivity
 	viewContributors
 	viewContributorInsights
+	viewContributorActivity
 	viewDependencies
 	viewSecurity
 	viewRecruiter
@@ -105,7 +106,7 @@ func (m DashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "j":
 			if m.showExport {
 				return m, func() tea.Msg {
-					_,err := ExportJSON(m.data, "analysis.json")
+					_, err := ExportJSON(m.data, "analysis.json")
 					if err != nil {
 						return exportMsg{err, ""}
 					}
@@ -116,18 +117,18 @@ func (m DashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "m":
 			if m.showExport {
 				return m, func() tea.Msg {
-					_,err := ExportMarkdown(m.data, "analysis.md")
+					_, err := ExportMarkdown(m.data, "analysis.md")
 					if err != nil {
 						return exportMsg{err, ""}
 					}
 					return exportMsg{nil, "✓ Exported to analysis.md"}
 				}
 			}
-			
+
 		case "p":
 			if m.showExport {
 				return m, func() tea.Msg {
-					_,err := ExportPDF(m.data, "analysis.pdf")
+					_, err := ExportPDF(m.data, "analysis.pdf")
 					if err != nil {
 						return exportMsg{err, ""}
 					}
@@ -161,13 +162,13 @@ func (m DashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "6":
 			m.currentView = viewContributorInsights
 		case "7":
-			m.currentView = viewDependencies
+			m.currentView = viewContributorActivity
 		case "8":
-			m.currentView = viewSecurity
+			m.currentView = viewDependencies
 		case "9":
-			m.currentView = viewRecruiter
+			m.currentView = viewSecurity
 		case "0":
-			m.currentView = viewAPIStatus
+			m.currentView = viewRecruiter
 
 		case "right", "l":
 			if !m.showHelp && !m.showExport {
@@ -218,6 +219,10 @@ func (m DashboardModel) View() string {
 		content = m.contributorsView()
 	case viewContributorInsights:
 		content = m.contributorInsightsView()
+
+	case viewContributorActivity:
+		content = m.contributorActivityView()
+
 	case viewDependencies:
 		content = m.dependenciesView()
 	case viewSecurity:
@@ -241,7 +246,7 @@ func (m DashboardModel) View() string {
 	}
 
 	tabs := m.renderTabs()
-	
+
 	footer := SubtleStyle.Render("←→: switch view • f: files • e: export • ?: help • q: back")
 
 	fullContent := lipgloss.JoinVertical(
@@ -267,7 +272,8 @@ func (m DashboardModel) View() string {
 }
 
 func (m DashboardModel) renderTabs() string {
-	views := []string{"Overview", "Repo", "Langs", "Activity", "Contribs", "Insights", "Deps", "Security", "Recruiter", "API"}
+	views := []string{"Overview", "Repo", "Langs", "Activity", "Contribs", "Insights", "Engagement Analysis", "Deps", "Security", "Recruiter", "API"}
+
 	var renderedTabs []string
 
 	for i, name := range views {
@@ -297,16 +303,16 @@ func (m DashboardModel) overviewView() string {
 
 	metrics := fmt.Sprintf(
 		"💚 Health:   %d/100\n"+
-		"🚌 Bus Risk: %d (%s)\n"+
-		"🏗️ Maturity: %s",
+			"🚌 Bus Risk: %d (%s)\n"+
+			"🏗️ Maturity: %s",
 		m.data.HealthScore,
 		m.data.BusFactor,
 		m.data.BusRisk,
 		m.data.MaturityLevel,
 	)
-	
-	metricsBox := CardStyle.Render(lipgloss.JoinVertical(lipgloss.Left, 
-		lipgloss.NewStyle().Bold(true).Render("Key Metrics"), 
+
+	metricsBox := CardStyle.Render(lipgloss.JoinVertical(lipgloss.Left,
+		lipgloss.NewStyle().Bold(true).Render("Key Metrics"),
 		"\n"+metrics,
 	))
 
@@ -330,14 +336,14 @@ func (m DashboardModel) repoView() string {
 
 	info := fmt.Sprintf(
 		"Name:           %s\n"+
-		"Description:    %s\n\n"+
-		"⭐ Stars:        %d\n"+
-		"🍴 Forks:        %d\n"+
-		"🐛 Open Issues:  %d\n\n"+
-		"📅 Created:      %s\n"+
-		"🔄 Last Push:    %s\n"+
-		"🌿 Branch:       %s\n"+
-		"🔗 URL:          %s",
+			"Description:    %s\n\n"+
+			"⭐ Stars:        %d\n"+
+			"🍴 Forks:        %d\n"+
+			"🐛 Open Issues:  %d\n\n"+
+			"📅 Created:      %s\n"+
+			"🔄 Last Push:    %s\n"+
+			"🌿 Branch:       %s\n"+
+			"🔗 URL:          %s",
 		m.data.Repo.FullName,
 		m.data.Repo.Description,
 		m.data.Repo.Stars,
@@ -438,6 +444,70 @@ func boolToYesNo(b bool) string {
 	return "✗"
 }
 
+func renderSimpleBar(label string, value int, max int, width int) string {
+	if max == 0 {
+		return fmt.Sprintf("%-8s | %d", label, value)
+	}
+
+	barLen := int(float64(value) / float64(max) * float64(width))
+	if barLen < 1 && value > 0 {
+		barLen = 1
+	}
+
+	bar := strings.Repeat("█", barLen)
+	return fmt.Sprintf("%-8s | %-*s %d", label, width, bar, value)
+}
+
+func (m DashboardModel) contributorActivityView() string {
+	header := TitleStyle.Render(" Contributor Activity (Timeline) ")
+
+	a := m.data.ContributorActivity
+	max := a.Last180Days
+	if a.Last90Days > max {
+		max = a.Last90Days
+	}
+
+	trendGraph := fmt.Sprintf(
+		"📊 Engagement Trend\n\n%s\n%s",
+		renderBar("90 days", a.Last90Days, max, 25),
+		renderBar("180 days", a.Last180Days, max, 25),
+	)
+
+	content := fmt.Sprintf(
+		"👥 Engagement Overview\n\n"+
+			"• Active contributors (last 90 days):  %d\n"+
+			"• Active contributors (last 180 days): %d\n"+
+			"• Trend: %s\n\n"+
+			"%s\n\n"+
+			"💡 Insight:\n%s",
+		a.Last90Days,
+		a.Last180Days,
+		a.Trend,
+		trendGraph,
+		a.Insight,
+	)
+
+	return lipgloss.JoinVertical(
+		lipgloss.Left,
+		header,
+		CardStyle.Render(content),
+	)
+}
+
+func renderBar(label string, value, max, width int) string {
+	if max == 0 {
+		return fmt.Sprintf("%-8s | %s %d", label, "", value)
+	}
+
+	barLen := int(float64(value) / float64(max) * float64(width))
+	if barLen < 1 && value > 0 {
+		barLen = 1
+	}
+
+	bar := strings.Repeat("█", barLen)
+	return fmt.Sprintf("%-8s | %-*s %d", label, width, bar, value)
+}
+
 func (m DashboardModel) dependenciesView() string {
 	header := TitleStyle.Render(" Dependencies ")
 
@@ -519,7 +589,7 @@ func (m DashboardModel) contributorInsightsView() string {
 		recs += fmt.Sprintf("• %s\n", rec)
 	}
 
-	content := lipgloss.JoinVertical(lipgloss.Left, 
+	content := lipgloss.JoinVertical(lipgloss.Left,
 		lipgloss.JoinHorizontal(lipgloss.Top, CardStyle.Render(col1), CardStyle.Render(col2)),
 		CardStyle.Render(recs),
 	)
@@ -578,12 +648,12 @@ func (m DashboardModel) recruiterView() string {
 
 	summary := fmt.Sprintf(
 		"REPO:     %s\n"+
-		"STARS:    %d\n"+
-		"COMMITS:  %d (Last Year)\n"+
-		"CONTRIBS: %d\n"+
-		"ACTIVITY: %s\n"+
-		"MATURITY: %s (%d)\n"+
-		"HEALTH:   %d/100\n",
+			"STARS:    %d\n"+
+			"COMMITS:  %d (Last Year)\n"+
+			"CONTRIBS: %d\n"+
+			"ACTIVITY: %s\n"+
+			"MATURITY: %s (%d)\n"+
+			"HEALTH:   %d/100\n",
 		m.data.Repo.FullName,
 		m.data.Repo.Stars,
 		len(m.data.Commits),
@@ -612,9 +682,9 @@ func (m DashboardModel) apiStatusView() string {
 
 		rateLimitInfo = fmt.Sprintf(
 			"Status:    %s\n"+
-			"Remaining: %d / %d\n"+
-			"Used:      %.1f%%\n"+
-			"Reset:     %s",
+				"Remaining: %d / %d\n"+
+				"Used:      %.1f%%\n"+
+				"Reset:     %s",
 			status,
 			rateLimit.Resources.Core.Limit-rateLimit.Resources.Core.Remaining,
 			rateLimit.Resources.Core.Limit,
