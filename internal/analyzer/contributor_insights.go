@@ -11,17 +11,17 @@ import (
 
 // ContributorInsights contains detailed analysis of repository contributors
 type ContributorInsights struct {
-	TotalContributors   int                   `json:"total_contributors"`
-	ActiveContributors  int                   `json:"active_contributors"`  // Contributors with >1% of commits
-	TopContributor      *ContributorDetail    `json:"top_contributor"`
-	ContributorDetails  []ContributorDetail   `json:"contributor_details"`
-	DiversityScore      float64               `json:"diversity_score"`      // 0-100, higher = more diverse
-	ConcentrationRisk   string                `json:"concentration_risk"`   // Low, Medium, High, Critical
-	NewContributors     int                   `json:"new_contributors"`     // Contributors with <10 commits
-	VeteranContributors int                   `json:"veteran_contributors"` // Contributors with >100 commits
-	CommitDistribution  CommitDistribution    `json:"commit_distribution"`
-	TeamSize            string                `json:"team_size"`            // Solo, Small, Medium, Large
-	Recommendations     []string              `json:"recommendations"`
+	TotalContributors   int                 `json:"total_contributors"`
+	ActiveContributors  int                 `json:"active_contributors"` // Contributors with >1% of commits
+	TopContributor      *ContributorDetail  `json:"top_contributor"`
+	ContributorDetails  []ContributorDetail `json:"contributor_details"`
+	DiversityScore      float64             `json:"diversity_score"`      // 0-100, higher = more diverse
+	ConcentrationRisk   string              `json:"concentration_risk"`   // Low, Medium, High, Critical
+	NewContributors     int                 `json:"new_contributors"`     // Contributors with <10 commits
+	VeteranContributors int                 `json:"veteran_contributors"` // Contributors with >100 commits
+	CommitDistribution  CommitDistribution  `json:"commit_distribution"`
+	TeamSize            string              `json:"team_size"` // Solo, Small, Medium, Large
+	Recommendations     []string            `json:"recommendations"`
 }
 
 // ContributorDetail contains detailed info about a single contributor
@@ -36,9 +36,9 @@ type ContributorDetail struct {
 
 // CommitDistribution shows how commits are distributed
 type CommitDistribution struct {
-	Top1Percent    float64 `json:"top_1_percent"`    // % of commits by top 1%
-	Top10Percent   float64 `json:"top_10_percent"`   // % of commits by top 10%
-	Top50Percent   float64 `json:"top_50_percent"`   // % of commits by top 50%
+	Top1Percent     float64 `json:"top_1_percent"`    // % of commits by top 1%
+	Top10Percent    float64 `json:"top_10_percent"`   // % of commits by top 10%
+	Top50Percent    float64 `json:"top_50_percent"`   // % of commits by top 50%
 	GiniCoefficient float64 `json:"gini_coefficient"` // Inequality measure (0=equal, 1=unequal)
 }
 
@@ -46,11 +46,11 @@ type CommitDistribution struct {
 func AnalyzeContributors(contributors []github.Contributor) *ContributorInsights {
 	if len(contributors) == 0 {
 		return &ContributorInsights{
-			TotalContributors:  0,
-			DiversityScore:     0,
-			ConcentrationRisk:  "Unknown",
-			TeamSize:           "None",
-			Recommendations:    []string{"No contributor data available"},
+			TotalContributors: 0,
+			DiversityScore:    0,
+			ConcentrationRisk: "Unknown",
+			TeamSize:          "None",
+			Recommendations:   []string{"No contributor data available"},
 		}
 	}
 
@@ -71,7 +71,7 @@ func AnalyzeContributors(contributors []github.Contributor) *ContributorInsights
 		if totalCommits > 0 {
 			pct = float64(c.Commits) / float64(totalCommits) * 100
 		}
-		
+
 		details[i] = ContributorDetail{
 			Login:           c.Login,
 			Commits:         c.Commits,
@@ -111,7 +111,7 @@ func AnalyzeContributors(contributors []github.Contributor) *ContributorInsights
 	insights.ConcentrationRisk = determineConcentrationRisk(insights)
 
 	// Determine team size
-	insights.TeamSize = classifyTeamSize(len(contributors), insights.ActiveContributors)
+	insights.TeamSize = classifyTeamSize(insights.ActiveContributors)
 
 	// Generate recommendations
 	insights.Recommendations = generateRecommendations(insights)
@@ -174,7 +174,7 @@ func calculateGini(contributors []github.Contributor, total int) float64 {
 	}
 
 	n := len(contributors)
-	
+
 	// Sort by commits ascending for Gini calculation
 	sorted := make([]int, n)
 	for i, c := range contributors {
@@ -215,7 +215,7 @@ func calculateDiversityScore(contributors []github.Contributor, total int) float
 	if hhi <= minHHI {
 		return 100
 	}
-	
+
 	// Normalize: 100 = perfect diversity, 0 = single contributor
 	diversity := (1 - hhi) / (1 - minHHI) * 100
 	if diversity < 0 {
@@ -224,7 +224,7 @@ func calculateDiversityScore(contributors []github.Contributor, total int) float
 	if diversity > 100 {
 		diversity = 100
 	}
-	
+
 	return diversity
 }
 
@@ -234,7 +234,7 @@ func determineConcentrationRisk(insights *ContributorInsights) string {
 	}
 
 	topPct := insights.TopContributor.Percentage
-	
+
 	if topPct > 80 {
 		return "Critical"
 	} else if topPct > 60 {
@@ -245,7 +245,7 @@ func determineConcentrationRisk(insights *ContributorInsights) string {
 	return "Low"
 }
 
-func classifyTeamSize(total, active int) string {
+func classifyTeamSize(active int) string {
 	if active == 0 {
 		return "None"
 	} else if active == 1 {
@@ -285,7 +285,7 @@ func generateRecommendations(insights *ContributorInsights) []string {
 	if insights.VeteranContributors == 0 && insights.TotalContributors > 5 {
 		recs = append(recs, "📈 No veteran contributors yet. Project may be young or have high turnover.")
 	}
-	
+
 	if insights.NewContributors > insights.TotalContributors/2 && insights.TotalContributors > 10 {
 		recs = append(recs, "🆕 Many new contributors. Ensure good onboarding documentation.")
 	}
@@ -307,7 +307,7 @@ func generateRecommendations(insights *ContributorInsights) []string {
 // GetContributorActivity analyzes contributor activity patterns
 func GetContributorActivity(commits []github.Commit) map[string]int {
 	activity := make(map[string]int)
-	
+
 	for _, c := range commits {
 		date := c.Commit.Author.Date
 		if !date.IsZero() {
@@ -315,7 +315,7 @@ func GetContributorActivity(commits []github.Commit) map[string]int {
 			activity[week]++
 		}
 	}
-	
+
 	return activity
 }
 
@@ -329,10 +329,10 @@ func max(a, b int) int {
 
 // ContributorTrend represents activity trend for a contributor
 type ContributorTrend struct {
-	Login        string
-	RecentCommits int  // Last 30 days
+	Login         string
+	RecentCommits int // Last 30 days
 	TotalCommits  int
-	IsActive      bool // Had commits in last 30 days
+	IsActive      bool   // Had commits in last 30 days
 	Trend         string // "Rising", "Stable", "Declining", "Inactive"
 }
 
@@ -341,7 +341,7 @@ func AnalyzeContributorTrends(contributors []github.Contributor, commits []githu
 	// Count recent commits per contributor
 	recentCounts := make(map[string]int)
 	thirtyDaysAgo := time.Now().AddDate(0, 0, -30)
-	
+
 	for _, c := range commits {
 		if c.Commit.Author.Date.After(thirtyDaysAgo) {
 			// Note: We don't have author login in commit struct, so this is simplified
@@ -355,7 +355,7 @@ func AnalyzeContributorTrends(contributors []github.Contributor, commits []githu
 			Login:        c.Login,
 			TotalCommits: c.Commits,
 		}
-		
+
 		// Simplified trend analysis based on total commits
 		if c.Commits > 100 {
 			trend.Trend = "Veteran"
@@ -370,9 +370,9 @@ func AnalyzeContributorTrends(contributors []github.Contributor, commits []githu
 			trend.Trend = "New"
 			trend.IsActive = c.Commits > 0
 		}
-		
+
 		trends = append(trends, trend)
 	}
-	
+
 	return trends
 }
