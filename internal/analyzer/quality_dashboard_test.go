@@ -19,9 +19,12 @@ func TestGenerateQualityDashboard(t *testing.T) {
 
 	// Mock commits
 	commits := []github.Commit{
-		{SHA: "abc123", Commit: github.CommitDetails{Author: github.Author{Date: time.Now()}}},
-		{SHA: "def456", Commit: github.CommitDetails{Author: github.Author{Date: time.Now().AddDate(0, 0, -1)}}},
+		{SHA: "abc123"},
+		{SHA: "def456"},
 	}
+	// Set commit dates
+	commits[0].Commit.Author.Date = time.Now()
+	commits[1].Commit.Author.Date = time.Now().AddDate(0, 0, -1)
 
 	// Mock contributors
 	contributors := []github.Contributor{
@@ -182,8 +185,9 @@ func TestGetQualityGrade(t *testing.T) {
 
 func TestIdentifyProblemHotspots(t *testing.T) {
 	commits := []github.Commit{
-		{SHA: "abc123", Commit: github.CommitDetails{Author: github.Author{Date: time.Now()}}},
+		{SHA: "abc123"},
 	}
+	commits[0].Commit.Author.Date = time.Now()
 
 	// Test critical security hotspot
 	security := &SecurityScanResult{
@@ -213,8 +217,9 @@ func TestIdentifyProblemHotspots(t *testing.T) {
 
 func TestGenerateRecommendations(t *testing.T) {
 	commits := []github.Commit{
-		{SHA: "abc123", Commit: github.CommitDetails{Author: github.Author{Date: time.Now()}}},
+		{SHA: "abc123"},
 	}
+	commits[0].Commit.Author.Date = time.Now()
 
 	contributors := []github.Contributor{
 		{Login: "user1", Commits: 90},
@@ -226,7 +231,7 @@ func TestGenerateRecommendations(t *testing.T) {
 		CriticalCount: 1,
 	}
 
-	recommendations := generateRecommendations(
+	recommendations := generateDashboardRecommendations(
 		40, // low health
 		40, // low security
 		1,  // low bus factor
