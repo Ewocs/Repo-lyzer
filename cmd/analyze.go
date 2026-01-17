@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/agnivo988/Repo-lyzer/internal/analyzer"
 	"github.com/agnivo988/Repo-lyzer/internal/github"
@@ -148,6 +149,9 @@ var analyzeCmd = &cobra.Command{
 			return fmt.Errorf("invalid repository URL: %w", err)
 		}
 
+		// Record start time for analysis timing
+		startTime := time.Now()
+
 		// Initialize GitHub client
 		client := github.NewClient()
 
@@ -234,6 +238,10 @@ var analyzeCmd = &cobra.Command{
 		output.PrintHealth(score)
 		output.PrintGitHubAPIStatus(client)
 		output.PrintRecruiterSummary(summary)
+
+		// Display analysis time
+		duration := time.Since(startTime)
+		fmt.Printf("\n⏱️  Analysis completed in %.2f seconds\n", duration.Seconds())
 
 		return nil
 	},
