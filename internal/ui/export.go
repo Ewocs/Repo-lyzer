@@ -43,8 +43,9 @@ type MetricsExport struct {
 }
 
 type ContributorExport struct {
-	Login   string `json:"login"`
-	Commits int    `json:"commits"`
+	Login     string `json:"login"`
+	Commits   int    `json:"commits"`
+	AvatarURL string `json:"avatar_url,omitempty"`
 }
 
 // getDownloadsDir returns the user's Downloads folder
@@ -100,8 +101,9 @@ func ExportJSON(data AnalysisResult, _ string) (string, error) {
 	}
 	for i := 0; i < maxContribs; i++ {
 		topContribs = append(topContribs, ContributorExport{
-			Login:   data.Contributors[i].Login,
-			Commits: data.Contributors[i].Commits,
+			Login:     data.Contributors[i].Login,
+			Commits:   data.Contributors[i].Commits,
+			AvatarURL: data.Contributors[i].AvatarURL,
 		})
 	}
 
@@ -322,8 +324,9 @@ func buildExportData(data AnalysisResult) ExportData {
 	}
 	for i := 0; i < maxContribs; i++ {
 		topContribs = append(topContribs, ContributorExport{
-			Login:   data.Contributors[i].Login,
-			Commits: data.Contributors[i].Commits,
+			Login:     data.Contributors[i].Login,
+			Commits:   data.Contributors[i].Commits,
+			AvatarURL: data.Contributors[i].AvatarURL,
 		})
 	}
 

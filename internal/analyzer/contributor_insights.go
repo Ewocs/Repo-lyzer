@@ -31,6 +31,7 @@ type ContributorDetail struct {
 	Percentage      float64 `json:"percentage"`
 	Rank            int     `json:"rank"`
 	ContributorType string  `json:"contributor_type"` // Core, Regular, Occasional, New
+	AvatarURL       string  `json:"avatar_url,omitempty"`
 }
 
 // CommitDistribution shows how commits are distributed
@@ -77,6 +78,7 @@ func AnalyzeContributors(contributors []github.Contributor) *ContributorInsights
 			Percentage:      pct,
 			Rank:            i + 1,
 			ContributorType: classifyContributor(c.Commits, pct),
+			AvatarURL:       c.AvatarURL,
 		}
 	}
 	insights.ContributorDetails = details

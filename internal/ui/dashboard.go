@@ -432,7 +432,13 @@ func (m DashboardModel) contributorsView() string {
 			barLen = 1
 		}
 		bar := strings.Repeat("█", barLen)
-		lines = append(lines, fmt.Sprintf("%2d. %-20s %s %d", i+1, c.Login, bar, c.Commits))
+		
+		avatar := ""
+		if c.AvatarURL != "" {
+			avatar = fmt.Sprintf(" 👤 %s", c.AvatarURL)
+		}
+		
+		lines = append(lines, fmt.Sprintf("%2d. %-20s %s %d%s", i+1, c.Login, bar, c.Commits, avatar))
 	}
 
 	summary := fmt.Sprintf("\nTotal Contributors: %d", len(m.data.Contributors))
@@ -575,12 +581,17 @@ func (m DashboardModel) contributorInsightsView() string {
 
 	col2 := ""
 	if insights.TopContributor != nil {
+		avatar := ""
+		if insights.TopContributor.AvatarURL != "" {
+			avatar = fmt.Sprintf("\n👤 %s", insights.TopContributor.AvatarURL)
+		}
 		col2 = fmt.Sprintf(
 			"👑 TOP CONTRIBUTOR\n"+
-				"%s\n"+
+				"%s%s\n"+
 				"%d commits (%.1f%%)\n"+
 				"Type: %s",
 			insights.TopContributor.Login,
+			avatar,
 			insights.TopContributor.Commits,
 			insights.TopContributor.Percentage,
 			insights.TopContributor.ContributorType,
