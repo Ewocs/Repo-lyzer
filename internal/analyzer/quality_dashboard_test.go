@@ -35,14 +35,14 @@ func TestGenerateQualityDashboard(t *testing.T) {
 
 	// Mock security result
 	security := &SecurityScanResult{
-		SecurityScore:    80,
-		TotalCount:       2,
-		CriticalCount:    0,
-		HighCount:        1,
-		MediumCount:      1,
-		LowCount:         0,
-		ScannedPackages:  10,
-		Vulnerabilities:  []Vulnerability{},
+		SecurityScore:   80,
+		TotalCount:      2,
+		CriticalCount:   0,
+		HighCount:       1,
+		MediumCount:     1,
+		LowCount:        0,
+		ScannedPackages: 10,
+		Vulnerabilities: []Vulnerability{},
 	}
 
 	dashboard := GenerateQualityDashboard(
@@ -110,13 +110,13 @@ func TestGenerateQualityDashboard(t *testing.T) {
 
 func TestCalculateOverallScore(t *testing.T) {
 	tests := []struct {
-		name       string
-		health     int
-		security   int
-		maturity   int
-		busFactor  int
-		expectMin  int
-		expectMax  int
+		name      string
+		health    int
+		security  int
+		maturity  int
+		busFactor int
+		expectMin int
+		expectMax int
 	}{
 		{"Perfect scores", 100, 100, 100, 10, 95, 100},
 		{"Good scores", 80, 80, 80, 5, 70, 85},
@@ -136,11 +136,11 @@ func TestCalculateOverallScore(t *testing.T) {
 
 func TestDetermineRiskLevel(t *testing.T) {
 	tests := []struct {
-		name         string
-		overallScore int
-		busFactor    int
+		name          string
+		overallScore  int
+		busFactor     int
 		securityScore int
-		expected     string
+		expected      string
 	}{
 		{"Low risk", 90, 5, 90, "Low"},
 		{"Medium risk", 70, 3, 70, "Medium"},
@@ -195,7 +195,7 @@ func TestIdentifyProblemHotspots(t *testing.T) {
 		CriticalCount: 2,
 	}
 
-	hotspots := identifyProblemHotspots(50, 20, 1, commits, security, nil)
+	hotspots := identifyProblemHotspots(50, 20, 1, commits, security)
 
 	// Should identify security and bus factor hotspots
 	if len(hotspots) < 2 {

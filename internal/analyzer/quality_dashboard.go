@@ -76,7 +76,7 @@ func GenerateQualityDashboard(
 
 	// Identify problem hotspots
 	dashboard.ProblemHotspots = identifyProblemHotspots(
-		healthScore, securityScore, busFactor, commits, security, dependencies,
+		healthScore, securityScore, busFactor, commits, security,
 	)
 
 	// Generate actionable recommendations
@@ -170,7 +170,6 @@ func identifyProblemHotspots(
 	health, security, busFactor int,
 	commits []github.Commit,
 	securityResult *SecurityScanResult,
-	deps *DependencyAnalysis,
 ) []ProblemHotspot {
 
 	var hotspots []ProblemHotspot
