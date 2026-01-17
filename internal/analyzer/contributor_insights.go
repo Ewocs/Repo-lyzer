@@ -110,8 +110,8 @@ func AnalyzeContributors(contributors []github.Contributor) *ContributorInsights
 	// Determine concentration risk
 	insights.ConcentrationRisk = determineConcentrationRisk(insights)
 
-	// Determine team size
-	insights.TeamSize = classifyTeamSize(insights.ActiveContributors)
+	// Determine team size (use total contributors for overall team size)
+	insights.TeamSize = classifyTeamSize(insights.TotalContributors)
 
 	// Generate recommendations
 	insights.Recommendations = generateRecommendations(insights)
