@@ -3,7 +3,6 @@ package analyzer
 import (
 	"fmt"
 	"sort"
-	"strings"
 
 	"github.com/agnivo988/Repo-lyzer/internal/github"
 )
@@ -81,7 +80,7 @@ func GenerateQualityDashboard(
 	)
 
 	// Generate actionable recommendations
-	dashboard.Recommendations = generateRecommendations(
+	dashboard.Recommendations = generateDashboardRecommendations(
 		healthScore, securityScore, busFactor, commits, contributors, security, dependencies,
 	)
 
@@ -247,7 +246,7 @@ func identifyProblemHotspots(
 	return hotspots
 }
 
-func generateRecommendations(
+func generateDashboardRecommendations(
 	health, security, busFactor int,
 	commits []github.Commit,
 	contributors []github.Contributor,
