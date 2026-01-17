@@ -9,12 +9,12 @@ import (
 
 // QualityDashboard represents the high-level summary
 type QualityDashboard struct {
-	OverallScore     int                `json:"overall_score"`
-	RiskLevel        string             `json:"risk_level"`
-	QualityGrade     string             `json:"quality_grade"`
-	ProblemHotspots  []ProblemHotspot   `json:"problem_hotspots"`
-	Recommendations  []string           `json:"recommendations"`
-	KeyMetrics       DashboardMetrics   `json:"key_metrics"`
+	OverallScore    int              `json:"overall_score"`
+	RiskLevel       string           `json:"risk_level"`
+	QualityGrade    string           `json:"quality_grade"`
+	ProblemHotspots []ProblemHotspot `json:"problem_hotspots"`
+	Recommendations []string         `json:"recommendations"`
+	KeyMetrics      DashboardMetrics `json:"key_metrics"`
 }
 
 // ProblemHotspot identifies high-risk areas
@@ -90,12 +90,12 @@ func GenerateQualityDashboard(
 func calculateOverallScore(health, security, maturity, busFactor int) int {
 	// Weighted scoring: Health(30%), Security(30%), Maturity(25%), Bus Factor(15%)
 	busFactorScore := normalizeBusFactor(busFactor)
-	
+
 	score := int(
 		float64(health)*0.30 +
-		float64(security)*0.30 +
-		float64(maturity)*0.25 +
-		float64(busFactorScore)*0.15,
+			float64(security)*0.30 +
+			float64(maturity)*0.25 +
+			float64(busFactorScore)*0.15,
 	)
 
 	if score > 100 {
@@ -104,7 +104,7 @@ func calculateOverallScore(health, security, maturity, busFactor int) int {
 	if score < 0 {
 		score = 0
 	}
-	
+
 	return score
 }
 
@@ -172,7 +172,7 @@ func identifyProblemHotspots(
 	securityResult *SecurityScanResult,
 	deps *DependencyAnalysis,
 ) []ProblemHotspot {
-	
+
 	var hotspots []ProblemHotspot
 
 	// Security hotspots
@@ -207,7 +207,7 @@ func identifyProblemHotspots(
 	}
 
 	// Activity hotspots
-	recentCommits := countRecentCommits(commits, 90)
+	recentCommits := countRecentCommits(commits)
 	if recentCommits == 0 {
 		hotspots = append(hotspots, ProblemHotspot{
 			Area:        "Activity",
@@ -253,7 +253,7 @@ func generateDashboardRecommendations(
 	securityResult *SecurityScanResult,
 	deps *DependencyAnalysis,
 ) []string {
-	
+
 	var recommendations []string
 
 	// Security recommendations
@@ -271,7 +271,7 @@ func generateDashboardRecommendations(
 	}
 
 	// Activity recommendations
-	recentCommits := countRecentCommits(commits, 90)
+	recentCommits := countRecentCommits(commits)
 	if recentCommits == 0 {
 		recommendations = append(recommendations, "🔄 Resume development activity or archive if project is complete")
 	} else if recentCommits < 10 {
@@ -302,7 +302,7 @@ func generateDashboardRecommendations(
 	return recommendations
 }
 
-func countRecentCommits(commits []github.Commit, days int) int {
+func countRecentCommits(commits []github.Commit) int {
 	// This is a simplified version - in practice you'd check commit dates
 	// For now, we'll assume all commits in the slice are recent
 	return len(commits)
