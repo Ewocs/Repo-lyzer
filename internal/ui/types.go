@@ -25,6 +25,7 @@ type AnalysisResult struct {
 	License             *analyzer.LicenseAnalysis
 	ContributorActivity analyzer.ContributorActivityResult
 	RiskAlerts          *analyzer.RiskAlertsResult
+	QualityDashboard    *analyzer.QualityDashboard
 }
 
 // CachedAnalysisResult wraps AnalysisResult with cache metadata

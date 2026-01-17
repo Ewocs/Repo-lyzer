@@ -999,6 +999,20 @@ func (m MainModel) analyzeRepo(repoName string) tea.Cmd {
 			security != nil && security.CriticalCount > 0,
 		)
 
+		// Generate quality dashboard
+		qualityDashboard := analyzer.GenerateQualityDashboard(
+			repo,
+			commits,
+			contributors,
+			score,
+			busFactor,
+			maturityLevel,
+			maturityScore,
+			security,
+			nil, // codeQuality - not implemented yet
+			deps,
+		)
+
 		result := AnalysisResult{
 			Repo:                repo,
 			Commits:             commits,
@@ -1015,6 +1029,7 @@ func (m MainModel) analyzeRepo(repoName string) tea.Cmd {
 			Security:            security,
 			ContributorActivity: analyzer.AnalyzeContributorActivity(commits),
 			RiskAlerts:          riskAlerts,
+			QualityDashboard:    qualityDashboard,
 		}
 
 		// Save to cache

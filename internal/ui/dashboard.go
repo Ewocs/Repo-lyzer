@@ -17,6 +17,7 @@ type dashboardView int
 
 const (
 	viewOverview dashboardView = iota
+	viewQualityDashboard
 	viewRepo
 	viewLanguages
 	viewActivity
@@ -174,23 +175,23 @@ func (m DashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "1":
 			m.currentView = viewOverview
 		case "2":
-			m.currentView = viewRepo
+			m.currentView = viewQualityDashboard
 		case "3":
-			m.currentView = viewLanguages
+			m.currentView = viewRepo
 		case "4":
-			m.currentView = viewActivity
+			m.currentView = viewLanguages
 		case "5":
-			m.currentView = viewContributors
+			m.currentView = viewActivity
 		case "6":
-			m.currentView = viewContributorInsights
+			m.currentView = viewContributors
 		case "7":
-			m.currentView = viewContributorActivity
+			m.currentView = viewContributorInsights
 		case "8":
-			m.currentView = viewDependencies
+			m.currentView = viewContributorActivity
 		case "9":
-			m.currentView = viewSecurity
+			m.currentView = viewDependencies
 		case "0":
-			m.currentView = viewRecruiter
+			m.currentView = viewSecurity
 
 		case "right", "l":
 			if !m.showHelp && !m.showExport {
@@ -231,6 +232,8 @@ func (m DashboardModel) View() string {
 	switch m.currentView {
 	case viewOverview:
 		content = m.overviewView()
+	case viewQualityDashboard:
+		content = m.qualityDashboardView()
 	case viewRepo:
 		content = m.repoView()
 	case viewLanguages:
@@ -294,7 +297,7 @@ func (m DashboardModel) View() string {
 }
 
 func (m DashboardModel) renderTabs() string {
-	views := []string{"Overview", "Repo", "Langs", "Activity", "Contribs", "Insights", "Engagement Analysis", "Deps", "Security", "Recruiter", "API"}
+	views := []string{"Overview", "Quality", "Repo", "Langs", "Activity", "Contribs", "Insights", "Engagement", "Deps", "Security", "Recruiter", "API"}
 
 	var renderedTabs []string
 
@@ -763,6 +766,102 @@ func (m DashboardModel) apiStatusView() string {
 	)
 
 	return lipgloss.JoinVertical(lipgloss.Left, header, CardStyle.Render(info))
+}
+
+func (m DashboardModel) qualityDashboardView() string {
+	header := TitleStyle.Render(" 📊 Code Quality & Risk Summary ")
+
+	if m.data.QualityDashboard == nil {
+		return lipgloss.JoinVertical(lipgloss.Left, header, CardStyle.Render("Quality dashboard data not available"))
+	}
+
+	dash := m.data.QualityDashboard
+
+	// Summary section
+	summary := fmt.Sprintf(
+		"%s Overall Score: %d/100 (Grade: %s)\n"+
+			"%s Risk Level: %s\n\n"+
+			"🏥 Health: %d/100\n"+
+			"🔒 Security: %d/100\n"+
+			"🏗️ Maturity: %s\n"+
+			"🚌 Bus Factor: %d\n"+
+			"📈 Activity: %s\n"+
+			"👥 Contributors: %d",
+		dash.GetGradeColor(), dash.OverallScore, dash.QualityGrade,
+		dash.GetRiskLevelColor(), dash.RiskLevel,
+		dash.KeyMetrics.HealthScore,
+		dash.KeyMetrics.SecurityScore,
+		dash.KeyMetrics.MaturityLevel,
+		dash.KeyMetrics.BusFactor,
+		dash.KeyMetrics.ActivityLevel,
+		dash.KeyMetrics.ContributorCount,
+	)
+
+	summaryBox := CardStyle.Render(lipgloss.JoinVertical(lipgloss.Left,
+		lipgloss.NewStyle().Bold(true).Render("📋 Quality Summary"),
+		"\n"+summary,
+	))
+
+	// Problem hotspots section
+	var hotspotsContent string
+	if len(dash.ProblemHotspots) == 0 {
+		hotspotsContent = "✅ No critical issues identified"
+	} else {
+		var hotspotLines []string
+		for i, hotspot := range dash.ProblemHotspots {
+			if i >= 5 { // Limit to top 5
+				break
+			}
+			severityIcon := getSeverityIcon(hotspot.Severity)
+			hotspotLines = append(hotspotLines, fmt.Sprintf(
+				"%s %s: %s",
+				severityIcon, hotspot.Area, hotspot.Description,
+			))
+		}
+		hotspotsContent = strings.Join(hotspotLines, "\n")
+	}
+
+	hotspotsBox := CardStyle.Render(lipgloss.JoinVertical(lipgloss.Left,
+		lipgloss.NewStyle().Bold(true).Render("🔥 Problem Hotspots"),
+		"\n"+hotspotsContent,
+	))
+
+	// Recommendations section
+	var recsContent string
+	if len(dash.Recommendations) == 0 {
+		recsContent = "✨ No specific recommendations at this time"
+	} else {
+		recsContent = strings.Join(dash.Recommendations, "\n")
+	}
+
+	recsBox := CardStyle.Render(lipgloss.JoinVertical(lipgloss.Left,
+		lipgloss.NewStyle().Bold(true).Render("💡 Actionable Recommendations"),
+		"\n"+recsContent,
+	))
+
+	return lipgloss.JoinVertical(
+		lipgloss.Left,
+		header,
+		"\n",
+		summaryBox,
+		"\n",
+		lipgloss.JoinHorizontal(lipgloss.Top, hotspotsBox, " ", recsBox),
+	)
+}
+
+func getSeverityIcon(severity string) string {
+	switch severity {
+	case "Critical":
+		return "🚨"
+	case "High":
+		return "🔴"
+	case "Medium":
+		return "🟡"
+	case "Low":
+		return "🟢"
+	default:
+		return "ℹ️"
+	}
 }
 
 func (m DashboardModel) helpView() string {
