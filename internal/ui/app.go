@@ -952,7 +952,7 @@ func (m MainModel) analyzeRepo(repoName string) tea.Cmd {
 		tracker.NextStage()
 
 		// Stage 3: Analyze contributors
-		contributors, err := client.GetContributors(parts[0], parts[1])
+		contributors, err := client.GetContributorsWithAvatars(parts[0], parts[1], 15)
 		if err != nil {
 			return fmt.Errorf("failed to get contributors: %w", err)
 		}
@@ -1157,7 +1157,7 @@ func (m MainModel) compareRepos(repo1Name, repo2Name string) tea.Cmd {
 			return fmt.Errorf("failed to fetch %s: %w", repo1Name, err)
 		}
 		commits1, _ := client.GetCommits(parts1[0], parts1[1], 365)
-		contributors1, _ := client.GetContributors(parts1[0], parts1[1])
+		contributors1, _ := client.GetContributorsWithAvatars(parts1[0], parts1[1], 15)
 		languages1, _ := client.GetLanguages(parts1[0], parts1[1])
 		fileTree1, _ := client.GetFileTree(parts1[0], parts1[1], repo1.DefaultBranch)
 		score1 := analyzer.CalculateHealth(repo1, commits1)
@@ -1183,7 +1183,7 @@ func (m MainModel) compareRepos(repo1Name, repo2Name string) tea.Cmd {
 			return fmt.Errorf("failed to fetch %s: %w", repo2Name, err)
 		}
 		commits2, _ := client.GetCommits(parts2[0], parts2[1], 365)
-		contributors2, _ := client.GetContributors(parts2[0], parts2[1])
+		contributors2, _ := client.GetContributorsWithAvatars(parts2[0], parts2[1], 15)
 		languages2, _ := client.GetLanguages(parts2[0], parts2[1])
 		fileTree2, _ := client.GetFileTree(parts2[0], parts2[1], repo2.DefaultBranch)
 		score2 := analyzer.CalculateHealth(repo2, commits2)

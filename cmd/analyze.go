@@ -197,7 +197,7 @@ var analyzeCmd = &cobra.Command{
 		activity := analyzer.CommitsPerDay(commits)
 
 		// Fetch contributors
-		contributors, err := client.GetContributors(owner, repo)
+		contributors, err := client.GetContributorsWithAvatars(owner, repo, 15)
 		if err != nil {
 			return err
 		}
