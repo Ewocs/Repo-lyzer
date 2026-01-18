@@ -2,7 +2,26 @@
 - @agnivo988
 
 ## Contributors
+
+- @Aamod007
+- @Aditya8369
+- @agnivo988
+- @Gupta-02
+- @GauravKarakoti
+- @Sappymukherjee214
+- @ItsMeArm00n
+- @MuktaRedij
+- @Kiran95021
+- @Shriii19
 - @KUMARI-SONALIUPADHYAY
+- @magic-peach
+- @coderabbitai[bot]
+- @sahoo-tech
+- @Abhijeet-980
+- @Diksha78-bot
+- @Shivani-Meena07
+- @ShashankSaga
+
 
 <h1 align="center">Repo-lyzer</h1>
 <p align="center">
