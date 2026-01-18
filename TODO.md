@@ -1,10 +1,10 @@
-# Fix Error Message for Invalid Repository URLs
+# Fix Issues in Specified Files
 
 ## Tasks
-- [x] Update error messages in cmd/analyze.go, internal/ui/app.go for invalid repository URL format
-- [x] Ensure consistent error messaging across CLI and UI interfaces
+- [ ] Fix equality check in cmd/compare.go: Replace busFactor1 == busFactor2 with bus1 == bus2
+- [ ] Update 404 error message in internal/github/client.go
+- [ ] Fix duplicate "s" in switch case and add hint variable in internal/ui/menu.go
+- [ ] Simplify "UI interfaces" in TODO.md
 
 ## Status
-- Analysis complete: Error messages were too generic and didn't clearly indicate invalid URL format
-- Plan approved: Update error messages to be more descriptive about valid formats
-- Implementation complete: Error messages now clearly state "invalid repository URL: must be in owner/repo format or a valid GitHub URL"
+- Plan approved: Proceed with implementation

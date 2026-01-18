@@ -70,7 +70,7 @@ func (m MenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.cursor = len(m.choices) - 1
 				}
 			}
-		case "down", "j", "s", "S":
+		case "down", "j", "S":
 			if m.inSubmenu {
 				if m.submenuCursor < len(m.submenuChoices)-1 {
 					m.submenuCursor++

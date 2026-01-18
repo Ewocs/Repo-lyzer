@@ -113,7 +113,7 @@ var compareCmd = &cobra.Command{
 			repo1.Forks == repo2.Forks &&
 			len(commits1) == len(commits2) &&
 			len(contributors1) == len(contributors2) &&
-			busFactor1 == busFactor2 &&
+			bus1 == bus2 &&
 			maturityScore1 == maturityScore2 {
 
 			fmt.Println("\n✅ No differences found between the two repositories.")

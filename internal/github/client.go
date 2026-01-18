@@ -80,7 +80,7 @@ func (c *Client) get(url string, target interface{}) error {
 	}
 
 	if resp.StatusCode == http.StatusNotFound {
-		return fmt.Errorf("invalid repository URL: repository not found. Please check the URL and try again")
+		return fmt.Errorf("repository not found or inaccessible — it may be private or you may not have permission")
 	}
 
 	if resp.StatusCode == http.StatusUnauthorized {
