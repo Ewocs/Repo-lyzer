@@ -17,11 +17,13 @@ type dashboardView int
 
 const (
 	viewOverview dashboardView = iota
+	viewQualityDashboard
 	viewRepo
 	viewLanguages
 	viewActivity
 	viewContributors
 	viewContributorInsights
+	viewContributorActivity
 	viewDependencies
 	viewSecurity
 	viewRecruiter
@@ -40,9 +42,6 @@ type DashboardModel struct {
 	cacheStatus string // "fresh", "cached", or ""
 }
 
-// NewDashboardModel creates a new dashboard model for displaying analysis results.
-// It initializes an empty dashboard that can be populated with analysis data.
-// Returns the initialized DashboardModel.
 func NewDashboardModel() DashboardModel {
 	return DashboardModel{
 		currentView: viewOverview,
@@ -108,7 +107,7 @@ func (m DashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "j":
 			if m.showExport {
 				return m, func() tea.Msg {
-					_,err := ExportJSON(m.data, "analysis.json")
+					_, err := ExportJSON(m.data, "analysis.json")
 					if err != nil {
 						return exportMsg{err, ""}
 					}
@@ -119,18 +118,18 @@ func (m DashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "m":
 			if m.showExport {
 				return m, func() tea.Msg {
-					_,err := ExportMarkdown(m.data, "analysis.md")
+					_, err := ExportMarkdown(m.data, "analysis.md")
 					if err != nil {
 						return exportMsg{err, ""}
 					}
 					return exportMsg{nil, "✓ Exported to analysis.md"}
 				}
 			}
-			
+
 		case "p":
 			if m.showExport {
 				return m, func() tea.Msg {
-					_,err := ExportPDF(m.data, "analysis.pdf")
+					_, err := ExportPDF(m.data, "analysis.pdf")
 					if err != nil {
 						return exportMsg{err, ""}
 					}
@@ -138,64 +137,62 @@ func (m DashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 
+		case "c":
+			if m.showExport {
+				return m, func() tea.Msg {
+					_, err := ExportCSV(m.data, "analysis.csv")
+					if err != nil {
+						return exportMsg{err, ""}
+					}
+					return exportMsg{nil, "✓ Exported to analysis.csv"}
+				}
+			}
+
+		case "x":
+			if m.showExport {
+				return m, func() tea.Msg {
+					_, err := ExportHTML(m.data, "analysis.html")
+					if err != nil {
+						return exportMsg{err, ""}
+					}
+					return exportMsg{nil, "✓ Exported to analysis.html"}
+				}
+			}
+
 		case "f":
 			return m, func() tea.Msg { return "switch_to_tree" }
 
 		case "r":
-			// Refresh - re-analyze current repo
 			if m.data.Repo != nil {
 				return m, func() tea.Msg { return "refresh_data" }
 			}
 
 		case "b":
-			// Add to favorites
 			if m.data.Repo != nil {
 				return m, func() tea.Msg { return "add_to_favorites" }
 			}
 
-		// View switching keybindings
 		case "1":
 			m.currentView = viewOverview
-			m.showHelp = false
-			m.showExport = false
 		case "2":
-			m.currentView = viewRepo
-			m.showHelp = false
-			m.showExport = false
+			m.currentView = viewQualityDashboard
 		case "3":
-			m.currentView = viewLanguages
-			m.showHelp = false
-			m.showExport = false
+			m.currentView = viewRepo
 		case "4":
-			m.currentView = viewActivity
-			m.showHelp = false
-			m.showExport = false
+			m.currentView = viewLanguages
 		case "5":
-			m.currentView = viewContributors
-			m.showHelp = false
-			m.showExport = false
+			m.currentView = viewActivity
 		case "6":
-			m.currentView = viewContributorInsights
-			m.showHelp = false
-			m.showExport = false
+			m.currentView = viewContributors
 		case "7":
-			m.currentView = viewDependencies
-			m.showHelp = false
-			m.showExport = false
+			m.currentView = viewContributorInsights
 		case "8":
-			m.currentView = viewSecurity
-			m.showHelp = false
-			m.showExport = false
+			m.currentView = viewContributorActivity
 		case "9":
-			m.currentView = viewRecruiter
-			m.showHelp = false
-			m.showExport = false
+			m.currentView = viewDependencies
 		case "0":
-			m.currentView = viewAPIStatus
-			m.showHelp = false
-			m.showExport = false
+			m.currentView = viewSecurity
 
-		// Arrow key navigation between views
 		case "right", "l":
 			if !m.showHelp && !m.showExport {
 				if m.currentView < viewAPIStatus {
@@ -210,7 +207,6 @@ func (m DashboardModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case "t":
-			// Toggle theme
 			theme := CycleTheme()
 			m.statusMsg = fmt.Sprintf("Theme: %s", theme.Name)
 			return m, tea.Tick(2*time.Second, func(time.Time) tea.Msg {
@@ -227,7 +223,6 @@ func (m DashboardModel) View() string {
 		return "No data loaded"
 	}
 
-	// Show help overlay
 	if m.showHelp {
 		return m.helpView()
 	}
@@ -237,6 +232,8 @@ func (m DashboardModel) View() string {
 	switch m.currentView {
 	case viewOverview:
 		content = m.overviewView()
+	case viewQualityDashboard:
+		content = m.qualityDashboardView()
 	case viewRepo:
 		content = m.repoView()
 	case viewLanguages:
@@ -247,6 +244,10 @@ func (m DashboardModel) View() string {
 		content = m.contributorsView()
 	case viewContributorInsights:
 		content = m.contributorInsightsView()
+
+	case viewContributorActivity:
+		content = m.contributorActivityView()
+
 	case viewDependencies:
 		content = m.dependenciesView()
 	case viewSecurity:
@@ -257,12 +258,11 @@ func (m DashboardModel) View() string {
 		content = m.apiStatusView()
 	}
 
-	// Add export panel if shown
 	if m.showExport {
 		content = lipgloss.JoinVertical(
 			lipgloss.Left,
 			content,
-			BoxStyle.Render("📥 Export:\n[J] JSON  [M] Markdown  [P] PDF"),
+			CardStyle.Render("📥 Export Options:\n[J] JSON  [M] Markdown  [C] CSV  [X] HTML  [P] PDF"),
 		)
 	}
 
@@ -270,14 +270,16 @@ func (m DashboardModel) View() string {
 		content += "\n" + SubtleStyle.Render(m.statusMsg)
 	}
 
-	// Navigation tabs
 	tabs := m.renderTabs()
-	footer := SubtleStyle.Render(FormatShortcutsCompact(GetDashboardShortcuts()))
+
+	footer := SubtleStyle.Render("←→: switch view • f: files • e: export • ?: help • q: back")
 
 	fullContent := lipgloss.JoinVertical(
 		lipgloss.Left,
 		tabs,
+		"\n",
 		content,
+		"\n",
 		footer,
 	)
 
@@ -295,70 +297,82 @@ func (m DashboardModel) View() string {
 }
 
 func (m DashboardModel) renderTabs() string {
-	views := []string{"Overview", "Repo", "Langs", "Activity", "Contribs", "Insights", "Deps", "Security", "Recruiter", "API"}
-	var tabs []string
+	views := []string{"Overview", "Quality", "Repo", "Langs", "Activity", "Contribs", "Insights", "Engagement", "Deps", "Security", "Recruiter", "API"}
+
+	var renderedTabs []string
 
 	for i, name := range views {
 		if dashboardView(i) == m.currentView {
-			tabs = append(tabs, SelectedStyle.Render(" "+name+" "))
+			renderedTabs = append(renderedTabs, ActiveTabStyle.Render(name))
 		} else {
-			tabs = append(tabs, SubtleStyle.Render(" "+name+" "))
+			renderedTabs = append(renderedTabs, InactiveTabStyle.Render(name))
 		}
 	}
 
-	return BoxStyle.Render(strings.Join(tabs, "│"))
+	return lipgloss.JoinHorizontal(lipgloss.Top, renderedTabs...)
 }
 
 func (m DashboardModel) overviewView() string {
-	// Cache status indicator
 	cacheIndicator := ""
 	switch m.cacheStatus {
 	case "fresh":
-		cacheIndicator = " 🟢 Fresh"
+		cacheIndicator = "🟢 Fresh"
 	case "cached":
-		cacheIndicator = " 🟡 Cached"
+		cacheIndicator = "🟡 Cached"
 	case "expired":
-		cacheIndicator = " 🔴 Expired"
+		cacheIndicator = "🔴 Expired"
 	}
 
-	header := TitleStyle.Render(
-		fmt.Sprintf("📊 Analysis for %s%s", m.data.Repo.FullName, cacheIndicator),
-	)
+	header := TitleStyle.Render(fmt.Sprintf(" %s ", m.data.Repo.FullName))
+	subHeader := SubtleStyle.Render(fmt.Sprintf(" %s", cacheIndicator))
 
 	metrics := fmt.Sprintf(
-		"Health Score: %d\nBus Factor: %d (%s)\nMaturity: %s (%d)",
+		"💚 Health:   %d/100\n"+
+			"🚌 Bus Risk: %d (%s)\n"+
+			"🏗️ Maturity: %s",
 		m.data.HealthScore,
 		m.data.BusFactor,
 		m.data.BusRisk,
 		m.data.MaturityLevel,
-		m.data.MaturityScore,
 	)
-	metricsBox := BoxStyle.Render(metrics)
+
+	metricsBox := CardStyle.Render(lipgloss.JoinVertical(lipgloss.Left,
+		lipgloss.NewStyle().Bold(true).Render("Key Metrics"),
+		"\n"+metrics,
+	))
 
 	activity := analyzer.CommitsPerDay(m.data.Commits)
-	chart := RenderCommitActivity(activity, 10)
-	chartBox := BoxStyle.Render(chart)
+	chart := RenderCommitActivity(activity, 15)
+	chartBox := CardStyle.Render(lipgloss.JoinVertical(lipgloss.Left,
+		lipgloss.NewStyle().Bold(true).Render("Activity Trend"),
+		"\n"+chart,
+	))
+	riskPanel := m.riskAlertsView()
 
 	return lipgloss.JoinVertical(
 		lipgloss.Left,
-		header,
+		lipgloss.JoinHorizontal(lipgloss.Center, header, subHeader),
+		"\n",
 		lipgloss.JoinHorizontal(lipgloss.Top, metricsBox, chartBox),
+		"\n",
+		riskPanel,
 	)
+
 }
 
 func (m DashboardModel) repoView() string {
-	header := TitleStyle.Render("📦 Repository Details")
+	header := TitleStyle.Render(" Repository Details ")
 
 	info := fmt.Sprintf(
-		"Name: %s\n"+
-			"Description: %s\n"+
-			"⭐ Stars: %d\n"+
-			"🍴 Forks: %d\n"+
-			"🐛 Open Issues: %d\n"+
-			"📅 Created: %s\n"+
-			"🔄 Last Push: %s\n"+
-			"🌿 Default Branch: %s\n"+
-			"🔗 URL: %s",
+		"Name:           %s\n"+
+			"Description:    %s\n\n"+
+			"⭐ Stars:        %d\n"+
+			"🍴 Forks:        %d\n"+
+			"🐛 Open Issues:  %d\n\n"+
+			"📅 Created:      %s\n"+
+			"🔄 Last Push:    %s\n"+
+			"🌿 Branch:       %s\n"+
+			"🔗 URL:          %s",
 		m.data.Repo.FullName,
 		m.data.Repo.Description,
 		m.data.Repo.Stars,
@@ -370,23 +384,21 @@ func (m DashboardModel) repoView() string {
 		m.data.Repo.HTMLURL,
 	)
 
-	return lipgloss.JoinVertical(lipgloss.Left, header, BoxStyle.Render(info))
+	return lipgloss.JoinVertical(lipgloss.Left, header, CardStyle.Render(info))
 }
 
 func (m DashboardModel) languagesView() string {
-	header := TitleStyle.Render("💻 Languages")
+	header := TitleStyle.Render(" Languages ")
 
 	if len(m.data.Languages) == 0 {
-		return lipgloss.JoinVertical(lipgloss.Left, header, BoxStyle.Render("No language data available"))
+		return lipgloss.JoinVertical(lipgloss.Left, header, CardStyle.Render("No language data available"))
 	}
 
-	// Calculate total bytes
 	total := 0
 	for _, bytes := range m.data.Languages {
 		total += bytes
 	}
 
-	// Sort languages by bytes
 	type langStat struct {
 		name  string
 		bytes int
@@ -402,7 +414,7 @@ func (m DashboardModel) languagesView() string {
 	var lines []string
 	for _, lang := range langs {
 		pct := float64(lang.bytes) / float64(total) * 100
-		barLen := int(pct / 5) // 20 chars max
+		barLen := int(pct / 2)
 		if barLen < 1 && lang.bytes > 0 {
 			barLen = 1
 		}
@@ -410,26 +422,24 @@ func (m DashboardModel) languagesView() string {
 		lines = append(lines, fmt.Sprintf("%-15s %s %.1f%%", lang.name, bar, pct))
 	}
 
-	return lipgloss.JoinVertical(lipgloss.Left, header, BoxStyle.Render(strings.Join(lines, "\n")))
+	return lipgloss.JoinVertical(lipgloss.Left, header, CardStyle.Render(strings.Join(lines, "\n")))
 }
 
 func (m DashboardModel) activityView() string {
-	header := TitleStyle.Render("📈 Commit Activity (Last 30 Days)")
-
+	header := TitleStyle.Render(" Commit Activity ")
 	activity := analyzer.CommitsPerDay(m.data.Commits)
-	chart := RenderCommitActivity(activity, 30)
-
+	chart := RenderCommitActivity(activity, 40) // Wider chart
 	totalCommits := len(m.data.Commits)
-	stats := fmt.Sprintf("\nTotal Commits (1 year): %d", totalCommits)
+	stats := fmt.Sprintf("\nTotal Commits (Last Year): %d", totalCommits)
 
-	return lipgloss.JoinVertical(lipgloss.Left, header, BoxStyle.Render(chart+stats))
+	return lipgloss.JoinVertical(lipgloss.Left, header, CardStyle.Render(chart+stats))
 }
 
 func (m DashboardModel) contributorsView() string {
-	header := TitleStyle.Render("👥 Top Contributors")
+	header := TitleStyle.Render(" Top Contributors ")
 
 	if len(m.data.Contributors) == 0 {
-		return lipgloss.JoinVertical(lipgloss.Left, header, BoxStyle.Render("No contributor data available"))
+		return lipgloss.JoinVertical(lipgloss.Left, header, CardStyle.Render("No contributor data available"))
 	}
 
 	var lines []string
@@ -438,42 +448,111 @@ func (m DashboardModel) contributorsView() string {
 		maxShow = len(m.data.Contributors)
 	}
 
-	// Find max contributions for bar scaling
 	maxContribs := m.data.Contributors[0].Commits
 
 	for i := 0; i < maxShow; i++ {
 		c := m.data.Contributors[i]
-		barLen := int(float64(c.Commits) / float64(maxContribs) * 20)
+		barLen := int(float64(c.Commits) / float64(maxContribs) * 30)
 		if barLen < 1 {
 			barLen = 1
 		}
 		bar := strings.Repeat("█", barLen)
-		lines = append(lines, fmt.Sprintf("%2d. %-20s %s %d", i+1, c.Login, bar, c.Commits))
+		
+		avatar := ""
+		if c.AvatarURL != "" {
+			avatar = fmt.Sprintf(" 👤 %s", c.AvatarURL)
+		}
+		
+		lines = append(lines, fmt.Sprintf("%2d. %-20s %s %d%s", i+1, c.Login, bar, c.Commits, avatar))
 	}
 
 	summary := fmt.Sprintf("\nTotal Contributors: %d", len(m.data.Contributors))
 	lines = append(lines, summary)
 
-	return lipgloss.JoinVertical(lipgloss.Left, header, BoxStyle.Render(strings.Join(lines, "\n")))
+	return lipgloss.JoinVertical(lipgloss.Left, header, CardStyle.Render(strings.Join(lines, "\n")))
 }
 
 func boolToYesNo(b bool) string {
 	if b {
-		return "✓ Yes"
+		return "✓"
 	}
-	return "✗ No"
+	return "✗"
+}
+
+func renderSimpleBar(label string, value int, max int, width int) string {
+	if max == 0 {
+		return fmt.Sprintf("%-8s | %d", label, value)
+	}
+
+	barLen := int(float64(value) / float64(max) * float64(width))
+	if barLen < 1 && value > 0 {
+		barLen = 1
+	}
+
+	bar := strings.Repeat("█", barLen)
+	return fmt.Sprintf("%-8s | %-*s %d", label, width, bar, value)
+}
+
+func (m DashboardModel) contributorActivityView() string {
+	header := TitleStyle.Render(" Contributor Activity (Timeline) ")
+
+	a := m.data.ContributorActivity
+	max := a.Last180Days
+	if a.Last90Days > max {
+		max = a.Last90Days
+	}
+
+	trendGraph := fmt.Sprintf(
+		"📊 Engagement Trend\n\n%s\n%s",
+		renderBar("90 days", a.Last90Days, max, 25),
+		renderBar("180 days", a.Last180Days, max, 25),
+	)
+
+	content := fmt.Sprintf(
+		"👥 Engagement Overview\n\n"+
+			"• Active contributors (last 90 days):  %d\n"+
+			"• Active contributors (last 180 days): %d\n"+
+			"• Trend: %s\n\n"+
+			"%s\n\n"+
+			"💡 Insight:\n%s",
+		a.Last90Days,
+		a.Last180Days,
+		a.Trend,
+		trendGraph,
+		a.Insight,
+	)
+
+	return lipgloss.JoinVertical(
+		lipgloss.Left,
+		header,
+		CardStyle.Render(content),
+	)
+}
+
+func renderBar(label string, value, max, width int) string {
+	if max == 0 {
+		return fmt.Sprintf("%-8s | %s %d", label, "", value)
+	}
+
+	barLen := int(float64(value) / float64(max) * float64(width))
+	if barLen < 1 && value > 0 {
+		barLen = 1
+	}
+
+	bar := strings.Repeat("█", barLen)
+	return fmt.Sprintf("%-8s | %-*s %d", label, width, bar, value)
 }
 
 func (m DashboardModel) dependenciesView() string {
-	header := TitleStyle.Render("📦 Dependencies")
+	header := TitleStyle.Render(" Dependencies ")
 
 	if m.data.Dependencies == nil || len(m.data.Dependencies.Files) == 0 {
-		return lipgloss.JoinVertical(lipgloss.Left, header, BoxStyle.Render("No dependency files found"))
+		return lipgloss.JoinVertical(lipgloss.Left, header, CardStyle.Render("No dependency files found"))
 	}
 
 	deps := m.data.Dependencies
 	summary := fmt.Sprintf(
-		"Total Dependencies: %d\nPackage Managers: %s\nLock File: %s",
+		"Total Deps:       %d\nPackage Managers: %s\nLock File:        %s",
 		deps.TotalDeps,
 		strings.Join(deps.Languages, ", "),
 		boolToYesNo(deps.HasLockFile),
@@ -481,7 +560,7 @@ func (m DashboardModel) dependenciesView() string {
 
 	var depLines []string
 	for _, file := range deps.Files {
-		depLines = append(depLines, fmt.Sprintf("\n📄 %s (%d deps)", file.Filename, file.TotalCount))
+		depLines = append(depLines, fmt.Sprintf("\n📄 %s (%d)", file.Filename, file.TotalCount))
 		maxShow := 5
 		if len(file.Dependencies) < maxShow {
 			maxShow = len(file.Dependencies)
@@ -491,35 +570,33 @@ func (m DashboardModel) dependenciesView() string {
 			depLines = append(depLines, fmt.Sprintf("  • %s %s", d.Name, d.Version))
 		}
 		if len(file.Dependencies) > maxShow {
-			depLines = append(depLines, fmt.Sprintf("  ... and %d more", len(file.Dependencies)-maxShow))
+			depLines = append(depLines, fmt.Sprintf("  ... %d more", len(file.Dependencies)-maxShow))
 		}
 	}
 
-	content := BoxStyle.Render(summary) + "\n" + BoxStyle.Render(strings.Join(depLines, "\n"))
+	content := CardStyle.Render(summary) + "\n" + CardStyle.Render(strings.Join(depLines, "\n"))
 	return lipgloss.JoinVertical(lipgloss.Left, header, content)
 }
 
 func (m DashboardModel) contributorInsightsView() string {
-	header := TitleStyle.Render("🔍 Contributor Insights")
+	header := TitleStyle.Render(" Insights ")
 
 	insights := m.data.ContributorInsights
 	if insights == nil {
-		// Generate insights on the fly if not pre-computed
 		insights = analyzer.AnalyzeContributors(m.data.Contributors)
 	}
 
 	if insights.TotalContributors == 0 {
-		return lipgloss.JoinVertical(lipgloss.Left, header, BoxStyle.Render("No contributor data available"))
+		return lipgloss.JoinVertical(lipgloss.Left, header, CardStyle.Render("No contributor data available"))
 	}
 
-	// Overview section
-	overview := fmt.Sprintf(
-		"📊 Overview\n"+
-			"   Total Contributors: %d\n"+
-			"   Active Contributors: %d (>1%% commits)\n"+
-			"   Team Size: %s\n"+
-			"   Diversity Score: %.1f/100\n"+
-			"   Concentration Risk: %s",
+	col1 := fmt.Sprintf(
+		"📊 OVERVIEW\n"+
+			"Total:        %d\n"+
+			"Active:       %d\n"+
+			"Team Size:    %s\n"+
+			"Diversity:    %.1f\n"+
+			"Risk:         %s",
 		insights.TotalContributors,
 		insights.ActiveContributors,
 		insights.TeamSize,
@@ -527,79 +604,58 @@ func (m DashboardModel) contributorInsightsView() string {
 		insights.ConcentrationRisk,
 	)
 
-	// Top contributor
-	topContrib := ""
+	col2 := ""
 	if insights.TopContributor != nil {
-		topContrib = fmt.Sprintf(
-			"\n\n👑 Top Contributor\n"+
-				"   %s: %d commits (%.1f%%)\n"+
-				"   Type: %s",
+		avatar := ""
+		if insights.TopContributor.AvatarURL != "" {
+			avatar = fmt.Sprintf("\n👤 %s", insights.TopContributor.AvatarURL)
+		}
+		col2 = fmt.Sprintf(
+			"👑 TOP CONTRIBUTOR\n"+
+				"%s%s\n"+
+				"%d commits (%.1f%%)\n"+
+				"Type: %s",
 			insights.TopContributor.Login,
+			avatar,
 			insights.TopContributor.Commits,
 			insights.TopContributor.Percentage,
 			insights.TopContributor.ContributorType,
 		)
 	}
 
-	// Distribution stats
-	dist := insights.CommitDistribution
-	distribution := fmt.Sprintf(
-		"\n\n📈 Commit Distribution\n"+
-			"   Top 1%%:  %.1f%% of commits\n"+
-			"   Top 10%%: %.1f%% of commits\n"+
-			"   Top 50%%: %.1f%% of commits\n"+
-			"   Gini Index: %.2f (0=equal, 1=unequal)",
-		dist.Top1Percent,
-		dist.Top10Percent,
-		dist.Top50Percent,
-		dist.GiniCoefficient,
-	)
-
-	// Contributor breakdown
-	breakdown := fmt.Sprintf(
-		"\n\n👥 Contributor Breakdown\n"+
-			"   Veterans (>100 commits): %d\n"+
-			"   New (<10 commits): %d",
-		insights.VeteranContributors,
-		insights.NewContributors,
-	)
-
 	// Recommendations
-	recs := "\n\n💡 Recommendations\n"
+	recs := "\n💡 RECOMMENDATIONS\n"
 	for _, rec := range insights.Recommendations {
-		recs += fmt.Sprintf("   %s\n", rec)
+		recs += fmt.Sprintf("• %s\n", rec)
 	}
 
-	content := overview + topContrib + distribution + breakdown + recs
+	content := lipgloss.JoinVertical(lipgloss.Left,
+		lipgloss.JoinHorizontal(lipgloss.Top, CardStyle.Render(col1), CardStyle.Render(col2)),
+		CardStyle.Render(recs),
+	)
 
-	return lipgloss.JoinVertical(lipgloss.Left, header, BoxStyle.Render(content))
+	return lipgloss.JoinVertical(lipgloss.Left, header, content)
 }
 
 func (m DashboardModel) securityView() string {
-	header := TitleStyle.Render("🔒 Security Scan")
-
-	quality := m.data.CodeQuality
-	if quality == nil {
-		// Generate on the fly if not pre-computed
-		quality = analyzer.AnalyzeCodeQuality(m.data.Repo, m.data.FileTree, m.data.Languages)
-	}
+	header := TitleStyle.Render(" Security ")
 
 	if m.data.Security == nil {
-		return lipgloss.JoinVertical(lipgloss.Left, header, BoxStyle.Render("No security scan data"))
+		return lipgloss.JoinVertical(lipgloss.Left, header, CardStyle.Render("No security scan data"))
 	}
 
 	sec := m.data.Security
 	grade := analyzer.GetSecurityGrade(sec.SecurityScore)
 
 	summary := fmt.Sprintf(
-		"Security Score: %d/100 (Grade: %s)\nPackages Scanned: %d\nVulnerabilities: %d\n\n🔴 Critical: %d  🟠 High: %d  🟡 Medium: %d  🟢 Low: %d",
+		"Score: %d/100 (Grade: %s)\nScanned: %d packages\nTotal Vulns: %d\n\n🔴 %d  🟠 %d  🟡 %d  🟢 %d",
 		sec.SecurityScore, grade, sec.ScannedPackages, sec.TotalCount,
 		sec.CriticalCount, sec.HighCount, sec.MediumCount, sec.LowCount,
 	)
 
 	var vulnLines []string
 	if len(sec.Vulnerabilities) == 0 {
-		vulnLines = append(vulnLines, "✅ No known vulnerabilities!")
+		vulnLines = append(vulnLines, "✅ No known vulnerabilities found")
 	} else {
 		maxShow := 5
 		if len(sec.Vulnerabilities) < maxShow {
@@ -610,52 +666,17 @@ func (m DashboardModel) securityView() string {
 			vulnLines = append(vulnLines, fmt.Sprintf("%s %s - %s", analyzer.GetSeverityEmoji(v.Severity), v.ID, v.Package))
 		}
 		if len(sec.Vulnerabilities) > maxShow {
-			vulnLines = append(vulnLines, fmt.Sprintf("... and %d more", len(sec.Vulnerabilities)-maxShow))
+			vulnLines = append(vulnLines, fmt.Sprintf("... %d more", len(sec.Vulnerabilities)-maxShow))
 		}
 	}
 
-	content := BoxStyle.Render(summary) + "\n" + BoxStyle.Render(strings.Join(vulnLines, "\n"))
-	return lipgloss.JoinVertical(lipgloss.Left, header, content)
-}
-
-func (m DashboardModel) licenseView() string {
-	header := TitleStyle.Render("📜 License")
-
-	if m.data.License == nil {
-		return lipgloss.JoinVertical(lipgloss.Left, header, BoxStyle.Render("No license data"))
-	}
-
-	lic := m.data.License
-	grade := analyzer.GetLicenseGrade(lic.LicenseScore)
-
-	var mainLic string
-	if lic.MainLicense != nil {
-		emoji := analyzer.GetLicenseEmoji(lic.MainLicense.Category)
-		mainLic = fmt.Sprintf(
-			"License: %s %s\nSPDX: %s\nCategory: %s\n\nPermissions:\n  Commercial: %s\n  Modify: %s\n  Distribute: %s\n  Patent Grant: %s",
-			emoji, lic.MainLicense.Name, lic.MainLicense.SPDX, lic.MainLicense.Category,
-			boolToYesNo(lic.MainLicense.Commercial), boolToYesNo(lic.MainLicense.Modify),
-			boolToYesNo(lic.MainLicense.Distribute), boolToYesNo(lic.MainLicense.Patent),
-		)
-	} else {
-		mainLic = "⚠️ No license detected"
-	}
-
-	score := fmt.Sprintf("\nLicense Score: %d/100 (Grade: %s)\nCompatibility: %s", lic.LicenseScore, grade, lic.Compatibility)
-
-	var warnings string
-	if len(lic.Warnings) > 0 {
-		warnings = "\n\n⚠️ Warnings:\n• " + strings.Join(lic.Warnings, "\n• ")
-	}
-
-	content := BoxStyle.Render(mainLic + score + warnings)
+	content := CardStyle.Render(summary) + "\n" + CardStyle.Render(strings.Join(vulnLines, "\n"))
 	return lipgloss.JoinVertical(lipgloss.Left, header, content)
 }
 
 func (m DashboardModel) recruiterView() string {
-	header := TitleStyle.Render("👔 Recruiter Summary")
+	header := TitleStyle.Render(" Recruiter Summary ")
 
-	// Determine activity level
 	activityLevel := "Low"
 	if len(m.data.Commits) > 500 {
 		activityLevel = "Very High"
@@ -666,74 +687,49 @@ func (m DashboardModel) recruiterView() string {
 	}
 
 	summary := fmt.Sprintf(
-		"Repository: %s\n"+
-			"⭐ Stars: %d\n"+
-			"🍴 Forks: %d\n"+
-			"📦 Commits (1y): %d\n"+
-			"👥 Contributors: %d\n"+
-			"🏗️ Maturity: %s (%d)\n"+
-			"⚠️ Bus Factor: %d - %s\n"+
-			" Activity: %s\n"+
-			"💚 Health Score: %d/100",
+		"REPO:     %s\n"+
+			"STARS:    %d\n"+
+			"COMMITS:  %d (Last Year)\n"+
+			"CONTRIBS: %d\n"+
+			"ACTIVITY: %s\n"+
+			"MATURITY: %s (%d)\n"+
+			"HEALTH:   %d/100\n",
 		m.data.Repo.FullName,
 		m.data.Repo.Stars,
-		m.data.Repo.Forks,
 		len(m.data.Commits),
 		len(m.data.Contributors),
-		m.data.MaturityLevel, m.data.MaturityScore,
-		m.data.BusFactor, m.data.BusRisk,
 		activityLevel,
+		m.data.MaturityLevel, m.data.MaturityScore,
 		m.data.HealthScore,
 	)
 
-	return lipgloss.JoinVertical(lipgloss.Left, header, BoxStyle.Render(summary))
+	return lipgloss.JoinVertical(lipgloss.Left, header, CardStyle.Render(summary))
 }
 
-func (m DashboardModel) helpView() string {
-	header := TitleStyle.Render("❓ Keyboard Shortcuts")
+func (m DashboardModel) riskAlertsView() string {
+	alerts := m.data.RiskAlerts
 
-	help := `
-Dashboard Navigation:
-  ←/→ or h/l    Switch between views
-  1-0           Jump to specific view
-  
-Views:
-  1  Overview     - Health, Bus Factor, Maturity
-  2  Repo         - Repository details
-  3  Languages    - Language breakdown
-  4  Activity     - Commit activity chart
-  5  Contributors - Top contributors list
-  6  Insights     - Detailed contributor insights
-  7  Dependencies - Project dependencies
-  8  Security     - Security vulnerability scan
-  9  Recruiter    - Summary for recruiters
-  0  API Status   - GitHub API rate limits
+	if alerts == nil || len(alerts.Alerts) == 0 {
+		return ""
+	}
 
-Actions:
-  e             Toggle export menu
-  j             Export to JSON (when export menu open)
-  m             Export to Markdown (when export menu open)
-  p             Export to PDF (when export menu open)
-  f             Open file tree
-  r             Refresh data
-  ?/h           Toggle this help
-  q/ESC         Go back / Close overlay
-  Ctrl+C        Quit application
-`
+	header := TitleStyle.Render(" ⚠ Risk Alerts ")
 
-	return lipgloss.Place(
-		m.width,
-		m.height,
-		lipgloss.Center,
-		lipgloss.Center,
-		lipgloss.JoinVertical(lipgloss.Left, header, BoxStyle.Render(help)),
+	var lines string
+	for _, a := range alerts.Alerts {
+		lines += "• " + a + "\n"
+	}
+
+	return lipgloss.JoinVertical(
+		lipgloss.Left,
+		header,
+		CardStyle.Render(lines),
 	)
 }
 
 func (m DashboardModel) apiStatusView() string {
-	header := TitleStyle.Render("🔐 GitHub API Status")
+	header := TitleStyle.Render(" API Status ")
 
-	// Get rate limit info
 	client := github.NewClient()
 	rateLimit, err := client.GetRateLimit()
 
@@ -746,9 +742,10 @@ func (m DashboardModel) apiStatusView() string {
 		usage := rateLimit.UsagePercent()
 
 		rateLimitInfo = fmt.Sprintf(
-			"Rate Limit Status: %s\n"+
-				"Requests: %d / %d (%.1f%% used)\n"+
-				"Resets in: %s",
+			"Status:    %s\n"+
+				"Remaining: %d / %d\n"+
+				"Used:      %.1f%%\n"+
+				"Reset:     %s",
 			status,
 			rateLimit.Resources.Core.Limit-rateLimit.Resources.Core.Remaining,
 			rateLimit.Resources.Core.Limit,
@@ -757,30 +754,134 @@ func (m DashboardModel) apiStatusView() string {
 		)
 	}
 
-	// Check authentication mode
-	mode := "🔴 Unauthenticated (60 req/hour)"
+	mode := "🔴 Unauthenticated"
 	if client.HasToken() {
-		mode = "🟢 Authenticated (5000 req/hour)"
+		mode = "🟢 Authenticated"
 	}
 
 	info := fmt.Sprintf(
-		"Authentication: %s\n\n"+
-			"%s\n\n"+
-			"Data Fetched:\n"+
-			"  • Repository info: ✓\n"+
-			"  • Commits (1 year): %d\n"+
-			"  • Contributors: %d\n"+
-			"  • Languages: %d\n"+
-			"  • File tree: %d entries\n\n"+
-			"💡 Tip: Set GITHUB_TOKEN env variable\n"+
-			"   for higher rate limits (5000/hour)",
+		"Mode: %s\n\n%s",
 		mode,
 		rateLimitInfo,
-		len(m.data.Commits),
-		len(m.data.Contributors),
-		len(m.data.Languages),
-		len(m.data.FileTree),
 	)
 
-	return lipgloss.JoinVertical(lipgloss.Left, header, BoxStyle.Render(info))
+	return lipgloss.JoinVertical(lipgloss.Left, header, CardStyle.Render(info))
+}
+
+func (m DashboardModel) qualityDashboardView() string {
+	header := TitleStyle.Render(" 📊 Code Quality & Risk Summary ")
+
+	if m.data.QualityDashboard == nil {
+		return lipgloss.JoinVertical(lipgloss.Left, header, CardStyle.Render("Quality dashboard data not available"))
+	}
+
+	dash := m.data.QualityDashboard
+
+	// Summary section
+	summary := fmt.Sprintf(
+		"%s Overall Score: %d/100 (Grade: %s)\n"+
+			"%s Risk Level: %s\n\n"+
+			"🏥 Health: %d/100\n"+
+			"🔒 Security: %d/100\n"+
+			"🏗️ Maturity: %s\n"+
+			"🚌 Bus Factor: %d\n"+
+			"📈 Activity: %s\n"+
+			"👥 Contributors: %d",
+		dash.GetGradeColor(), dash.OverallScore, dash.QualityGrade,
+		dash.GetRiskLevelColor(), dash.RiskLevel,
+		dash.KeyMetrics.HealthScore,
+		dash.KeyMetrics.SecurityScore,
+		dash.KeyMetrics.MaturityLevel,
+		dash.KeyMetrics.BusFactor,
+		dash.KeyMetrics.ActivityLevel,
+		dash.KeyMetrics.ContributorCount,
+	)
+
+	summaryBox := CardStyle.Render(lipgloss.JoinVertical(lipgloss.Left,
+		lipgloss.NewStyle().Bold(true).Render("📋 Quality Summary"),
+		"\n"+summary,
+	))
+
+	// Problem hotspots section
+	var hotspotsContent string
+	if len(dash.ProblemHotspots) == 0 {
+		hotspotsContent = "✅ No critical issues identified"
+	} else {
+		var hotspotLines []string
+		for i, hotspot := range dash.ProblemHotspots {
+			if i >= 5 { // Limit to top 5
+				break
+			}
+			severityIcon := getSeverityIcon(hotspot.Severity)
+			hotspotLines = append(hotspotLines, fmt.Sprintf(
+				"%s %s: %s",
+				severityIcon, hotspot.Area, hotspot.Description,
+			))
+		}
+		hotspotsContent = strings.Join(hotspotLines, "\n")
+	}
+
+	hotspotsBox := CardStyle.Render(lipgloss.JoinVertical(lipgloss.Left,
+		lipgloss.NewStyle().Bold(true).Render("🔥 Problem Hotspots"),
+		"\n"+hotspotsContent,
+	))
+
+	// Recommendations section
+	var recsContent string
+	if len(dash.Recommendations) == 0 {
+		recsContent = "✨ No specific recommendations at this time"
+	} else {
+		recsContent = strings.Join(dash.Recommendations, "\n")
+	}
+
+	recsBox := CardStyle.Render(lipgloss.JoinVertical(lipgloss.Left,
+		lipgloss.NewStyle().Bold(true).Render("💡 Actionable Recommendations"),
+		"\n"+recsContent,
+	))
+
+	return lipgloss.JoinVertical(
+		lipgloss.Left,
+		header,
+		"\n",
+		summaryBox,
+		"\n",
+		lipgloss.JoinHorizontal(lipgloss.Top, hotspotsBox, " ", recsBox),
+	)
+}
+
+func getSeverityIcon(severity string) string {
+	switch severity {
+	case "Critical":
+		return "🚨"
+	case "High":
+		return "🔴"
+	case "Medium":
+		return "🟡"
+	case "Low":
+		return "🟢"
+	default:
+		return "ℹ️"
+	}
+}
+
+func (m DashboardModel) helpView() string {
+	header := TitleStyle.Render(" Keyboard Shortcuts ")
+
+	help := `
+NAVIGATION
+  ←/→       Switch view
+  1-0       Jump to view
+  
+ACTIONS
+  e         Export menu
+  f         File tree
+  r         Refresh
+  ?         Toggle help
+  q         Go back
+`
+	return lipgloss.Place(
+		m.width, m.height,
+		lipgloss.Center, lipgloss.Center,
+		lipgloss.JoinVertical(lipgloss.Left, header, CardStyle.Render(help)),
+	)
 }
