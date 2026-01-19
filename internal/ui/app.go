@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/agnivo988/Repo-lyzer/internal/analyzer"
 	"github.com/agnivo988/Repo-lyzer/internal/cache"
@@ -57,18 +58,18 @@ type MainModel struct {
 	windowHeight    int
 	analysisType    string // quick, detailed, custom
 	appSettings     tea.LogOptionsSetter
-	compareResult   *CompareResult // Holds comparison data
-	history         *History       // Analysis history
-	historyCursor   int            // Current selection in history
-	helpContent     string         // Content for help screen
-	settingsOption  string         // Selected settings option
-	cache           *cache.Cache       // Offline cache for analysis results
-	cacheStatus     string             // Cache status: "fresh", "cached", "expired", ""
-	favorites       *Favorites         // Favorite repositories
-	favoritesCursor int                // Current selection in favorites
+	compareResult   *CompareResult      // Holds comparison data
+	history         *History            // Analysis history
+	historyCursor   int                 // Current selection in history
+	helpContent     string              // Content for help screen
+	settingsOption  string              // Selected settings option
+	cache           *cache.Cache        // Offline cache for analysis results
+	cacheStatus     string              // Cache status: "fresh", "cached", "expired", ""
+	favorites       *Favorites          // Favorite repositories
+	favoritesCursor int                 // Current selection in favorites
 	appConfig       *config.AppSettings // Application settings
-	tokenInput      string             // Buffer for token input
-	inTokenInput    bool               // Whether currently inputting token
+	tokenInput      string              // Buffer for token input
+	inTokenInput    bool                // Whether currently inputting token
 }
 
 // NewMainModel creates a new main application model with default settings.
@@ -92,13 +93,13 @@ func NewMainModel() MainModel {
 	}
 
 	return MainModel{
-		state:       stateMenu,
-		menu:        NewMenuModel(),
-		spinner:     s,
-		dashboard:   NewDashboardModel(),
-		tree:        NewTreeModel(nil),
-		cache:       repoCache,
-		appConfig:   appConfig,
+		state:     stateMenu,
+		menu:      NewMenuModel(),
+		spinner:   s,
+		dashboard: NewDashboardModel(),
+		tree:      NewTreeModel(nil),
+		cache:     repoCache,
+		appConfig: appConfig,
 	}
 }
 
@@ -143,7 +144,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.history = history
 			return m, nil
 		}
-	
+
 	case struct{}:
 		if m.state == stateLoading || m.state == stateCompareLoading {
 			m.animTick++
@@ -779,7 +780,7 @@ func (m MainModel) View() string {
 		}
 
 		statusView := fmt.Sprintf("%s %s...", m.spinner.View(), loadMsg)
-		
+
 		if len(SatelliteFrames) > 0 {
 			frame := SatelliteFrames[m.animTick%len(SatelliteFrames)]
 			statusView += "\n" + lipgloss.NewStyle().Foreground(lipgloss.Color("#00E5FF")).Render(frame)
@@ -814,12 +815,12 @@ func (m MainModel) View() string {
 	case stateCompareLoading:
 		loadMsg := fmt.Sprintf("📊 Comparing %s vs %s", m.compareInput1, m.compareInput2)
 		statusView := fmt.Sprintf("%s %s...", m.spinner.View(), loadMsg)
-		
+
 		if len(SatelliteFrames) > 0 {
 			frame := SatelliteFrames[m.animTick%len(SatelliteFrames)]
 			statusView += "\n" + lipgloss.NewStyle().Foreground(lipgloss.Color("#00E5FF")).Render(frame)
 		}
-		
+
 		statusView += "\n\n" + SubtleStyle.Render("Press ESC to cancel")
 
 		return lipgloss.Place(
@@ -951,7 +952,7 @@ func (m MainModel) analyzeRepo(repoName string) tea.Cmd {
 		tracker.NextStage()
 
 		// Stage 3: Analyze contributors
-		contributors, err := client.GetContributors(parts[0], parts[1])
+		contributors, err := client.GetContributorsWithAvatars(parts[0], parts[1], 15)
 		if err != nil {
 			return fmt.Errorf("failed to get contributors: %w", err)
 		}
@@ -983,6 +984,34 @@ func (m MainModel) analyzeRepo(repoName string) tea.Cmd {
 
 		// Mark complete
 		tracker.NextStage()
+		commitsLast90Days := 0
+		cutoff := time.Now().AddDate(0, 0, -90)
+
+		for _, c := range commits {
+			if c.Commit.Author.Date.After(cutoff) {
+				commitsLast90Days++
+			}
+		}
+		riskAlerts := analyzer.AnalyzeRiskAlerts(
+			busFactor,
+			score,
+			commitsLast90Days,
+			security != nil && security.CriticalCount > 0,
+		)
+
+		// Generate quality dashboard
+		qualityDashboard := analyzer.GenerateQualityDashboard(
+			repo,
+			commits,
+			contributors,
+			score,
+			busFactor,
+			maturityLevel,
+			maturityScore,
+			security,
+			nil, // codeQuality - not implemented yet
+			deps,
+		)
 
 		result := AnalysisResult{
 			Repo:                repo,
@@ -998,6 +1027,9 @@ func (m MainModel) analyzeRepo(repoName string) tea.Cmd {
 			Dependencies:        deps,
 			ContributorInsights: contributorInsights,
 			Security:            security,
+			ContributorActivity: analyzer.AnalyzeContributorActivity(commits),
+			RiskAlerts:          riskAlerts,
+			QualityDashboard:    qualityDashboard,
 		}
 
 		// Save to cache
@@ -1171,7 +1203,7 @@ func (m MainModel) compareRepos(repo1Name, repo2Name string) tea.Cmd {
 			return fmt.Errorf("failed to fetch %s: %w", repo1Name, err)
 		}
 		commits1, _ := client.GetCommits(parts1[0], parts1[1], 365)
-		contributors1, _ := client.GetContributors(parts1[0], parts1[1])
+		contributors1, _ := client.GetContributorsWithAvatars(parts1[0], parts1[1], 15)
 		languages1, _ := client.GetLanguages(parts1[0], parts1[1])
 		fileTree1, _ := client.GetFileTree(parts1[0], parts1[1], repo1.DefaultBranch)
 		score1 := analyzer.CalculateHealth(repo1, commits1)
@@ -1197,7 +1229,7 @@ func (m MainModel) compareRepos(repo1Name, repo2Name string) tea.Cmd {
 			return fmt.Errorf("failed to fetch %s: %w", repo2Name, err)
 		}
 		commits2, _ := client.GetCommits(parts2[0], parts2[1], 365)
-		contributors2, _ := client.GetContributors(parts2[0], parts2[1])
+		contributors2, _ := client.GetContributorsWithAvatars(parts2[0], parts2[1], 15)
 		languages2, _ := client.GetLanguages(parts2[0], parts2[1])
 		fileTree2, _ := client.GetFileTree(parts2[0], parts2[1], repo2.DefaultBranch)
 		score2 := analyzer.CalculateHealth(repo2, commits2)
@@ -1672,7 +1704,7 @@ Keybindings:
 
 		// Build format list with indicator
 		formatList := ""
-		formats := []string{"JSON", "Markdown", "CSV", "HTML"}
+		formats := []string{"JSON", "Markdown", "CSV", "HTML", "PDF"}
 		for _, f := range formats {
 			indicator := "  "
 			if f == currentFormat {
