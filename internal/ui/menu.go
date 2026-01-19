@@ -273,16 +273,16 @@ func (m MenuModel) submenuView(logoView string) string {
 	switch m.submenuType {
 	case "analyze":
 		title = "📊 ANALYSIS TYPE"
-		hint = "↑↓/jk/w s: navigate • 1-3: jump • Enter/Space: select • Esc/q: back"
+		hint = "↑↓/jk/ws: navigate • 1-3: jump • Enter/Space: select • Esc/q: back"
 	case "settings":
 		title = "⚙️ SETTINGS"
-		hint = "↑↓/jk/w s: navigate • 1-5: jump • Enter/Space: select • Esc/q: back"
+		hint = "↑↓/jk/ws: navigate • 1-5: jump • Enter/Space: select • Esc/q: back"
 	case "help":
 		title = "❓ HELP MENU"
-		hint = "↑↓/jk/w s: navigate • 1-4: jump • Enter/Space: select • Esc/q: back"
+		hint = "↑↓/jk/ws: navigate • 1-4: jump • Enter/Space: select • Esc/q: back"
 	default:
 		title = "SUBMENU"
-		hint = "↑↓/jk/w s: navigate • Enter/Space: select • Esc/q: back"
+		hint = "↑↓/jk/ws: navigate • Enter/Space: select • Esc/q: back"
 	}
 
 	header := TitleStyle.Render(title)
