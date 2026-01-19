@@ -1,17 +1,10 @@
-# Bug Fix: No output displayed in certain situations
-
-## Description
-Repo-lyzer does not display any output when analyzing repositories with no issues or when comparing repositories with no differences.
+# Fix Issues in Specified Files
 
 ## Tasks
-- [ ] Modify output functions in `internal/output/` to display messages when no data is available
-- [ ] Update `PrintCommitActivity` to show "No commit activity found" when data is empty
-- [ ] Update `PrintLanguages` to show "No language data available" when map is empty
-- [ ] Update compare command to detect identical repositories and show "No differences found" message
-- [ ] Test the changes with repositories having no data
+- [x] Fix equality check in cmd/compare.go: Replace busFactor1 == busFactor2 with bus1 == bus2
+- [x] Update 404 error message in internal/github/client.go
+- [x] Fix duplicate "s" in switch case and add hint variable in internal/ui/menu.go
+- [x] Simplify UI in TODO.md
 
-## Files to Edit
-- internal/output/charts.go
-- internal/output/json.go
-- cmd/compare.go
-- internal/ui/app.go (for compare result view)
+## Status
+- Plan approved: Proceed with implementation

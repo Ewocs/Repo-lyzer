@@ -65,7 +65,7 @@ func (m MenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.cursor = len(m.choices) - 1
 				}
 			}
-		case "down", "j", "s", "S":
+		case "down", "j", "S":
 			if m.inSubmenu {
 				if m.submenuCursor < len(m.submenuChoices)-1 {
 					m.submenuCursor++
@@ -268,6 +268,7 @@ func (m MenuModel) View() string {
 
 func (m MenuModel) submenuView(logoView string) string {
 	var title string
+	var hint string
 
 	switch m.submenuType {
 	case "analyze":
@@ -301,7 +302,7 @@ func (m MenuModel) submenuView(logoView string) string {
 	}
 
 	menuContent := lipgloss.JoinVertical(lipgloss.Left, menuItems...)
-	footer := SubtleStyle.Render("\n↑↓: navigate • Enter: select • Esc: back")
+	footer := SubtleStyle.Render("\n" + hint)
 
 	content := lipgloss.JoinVertical(
 		lipgloss.Center,

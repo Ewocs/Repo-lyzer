@@ -50,7 +50,7 @@ var compareCmd = &cobra.Command{
 
 		_, _ = client.GetLanguages(r1[0], r1[1])
 		commits1, _ := client.GetCommits(r1[0], r1[1], 14)
-		contributors1, _ := client.GetContributors(r1[0], r1[1])
+		contributors1, _ := client.GetContributorsWithAvatars(r1[0], r1[1], 15)
 		_, _ = client.GetFileTree(r1[0], r1[1], repo1.DefaultBranch)
 		bus1, risk1 := analyzer.BusFactor(contributors1)
 
@@ -65,7 +65,7 @@ var compareCmd = &cobra.Command{
 
 		_, _ = client.GetLanguages(r2[0], r2[1])
 		commits2, _ := client.GetCommits(r2[0], r2[1], 14)
-		contributors2, _ := client.GetContributors(r2[0], r2[1])
+		contributors2, _ := client.GetContributorsWithAvatars(r2[0], r2[1], 15)
 		_, _ = client.GetFileTree(r2[0], r2[1], repo2.DefaultBranch)
 		bus2, risk2 := analyzer.BusFactor(contributors2)
 
@@ -113,7 +113,7 @@ var compareCmd = &cobra.Command{
 			repo1.Forks == repo2.Forks &&
 			len(commits1) == len(commits2) &&
 			len(contributors1) == len(contributors2) &&
-			busFactor1 == busFactor2 &&
+			bus1 == bus2 &&
 			maturityScore1 == maturityScore2 {
 
 			fmt.Println("\n✅ No differences found between the two repositories.")
