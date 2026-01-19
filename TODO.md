@@ -1,15 +1,10 @@
-# Fix Errors in Branch
+# Fix Issues in Specified Files
 
 ## Tasks
-- [x] Fix invalid Go version in go.mod (1.24.4 → 1.21)
-- [x] Fix incorrect quick access key mappings in menu.go
-  - [x] "c" (Compare): cursor 1 → 2
-  - [x] "h" (History): cursor 2 → 3
-  - [x] "s" (Settings): cursor 4 → 5
-- [x] Fix TODO for export status messages in app.go
-  - [x] Add success messages for JSON export
-  - [x] Add success messages for Markdown export
+- [x] Fix equality check in cmd/compare.go: Replace busFactor1 == busFactor2 with bus1 == bus2
+- [x] Update 404 error message in internal/github/client.go
+- [x] Fix duplicate "s" in switch case and add hint variable in internal/ui/menu.go
+- [x] Simplify UI in TODO.md
 
 ## Status
-- All identified errors have been fixed
-- Branch should now build and run correctly
+- Plan approved: Proceed with implementation

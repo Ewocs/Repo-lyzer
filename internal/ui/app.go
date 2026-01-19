@@ -264,6 +264,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					cmds = append(cmds, m.analyzeRepo(cleanInput), TickProgressCmd())
 				} else {
 					m.err = fmt.Errorf("please enter a valid repository (owner/repo or GitHub URL)")
+					// Stay in input state to display error immediately
 				}
 
 			case tea.KeyBackspace:
@@ -880,7 +881,7 @@ func (m MainModel) cloneRepo(repoName string) tea.Cmd {
 	return func() tea.Msg {
 		parts := strings.Split(repoName, "/")
 		if len(parts) != 2 {
-			return cloneResult{err: fmt.Errorf("repository must be in owner/repo format")}
+			return cloneResult{err: fmt.Errorf("invalid repository URL: must be in owner/repo format or a valid GitHub URL")}
 		}
 
 		// Get Desktop path
@@ -915,7 +916,7 @@ func (m MainModel) analyzeRepo(repoName string) tea.Cmd {
 	return func() tea.Msg {
 		parts := strings.Split(repoName, "/")
 		if len(parts) != 2 {
-			return fmt.Errorf("repository must be in owner/repo format")
+			return fmt.Errorf("invalid repository URL: must be in owner/repo format or a valid GitHub URL")
 		}
 
 		// Check cache first
@@ -1189,10 +1190,10 @@ func (m MainModel) compareRepos(repo1Name, repo2Name string) tea.Cmd {
 		parts2 := strings.Split(repo2Name, "/")
 
 		if len(parts1) != 2 {
-			return fmt.Errorf("first repository must be in owner/repo format")
+			return fmt.Errorf("invalid repository URL: first repository must be in owner/repo format or a valid GitHub URL")
 		}
 		if len(parts2) != 2 {
-			return fmt.Errorf("second repository must be in owner/repo format")
+			return fmt.Errorf("invalid repository URL: second repository must be in owner/repo format or a valid GitHub URL")
 		}
 
 		client := github.NewClient()
@@ -1276,6 +1277,12 @@ func sanitizeRepoInput(input string) string {
 
 	// Remove trailing slash if present
 	clean = strings.TrimSuffix(clean, "/")
+
+	// Validate the final format
+	parts := strings.Split(clean, "/")
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		return "" // Invalid format
+	}
 
 	return clean
 }
