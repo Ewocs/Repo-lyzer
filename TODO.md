@@ -1,6 +1,10 @@
-# TODO: Fix Private Repository Analysis Error
+# Fix Issues in Specified Files
 
 ## Tasks
-- [x] Add SetToken method to Client struct in internal/github/client.go
-- [x] Modify analyzeCmd in cmd/analyze.go to prompt for GitHub token when accessing private repos
-- [ ] Test the fix by analyzing a private repository (requires Go environment)
+- [x] Fix equality check in cmd/compare.go: Replace busFactor1 == busFactor2 with bus1 == bus2
+- [x] Update 404 error message in internal/github/client.go
+- [x] Fix duplicate "s" in switch case and add hint variable in internal/ui/menu.go
+- [x] Simplify UI in TODO.md
+
+## Status
+- Plan approved: Proceed with implementation

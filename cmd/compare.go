@@ -108,6 +108,19 @@ var compareCmd = &cobra.Command{
 			fmt.Sprintf("%s (%d)", maturityLevel2, maturityScore2),
 		})
 
+		// Check if repositories are identical
+		if repo1.Stars == repo2.Stars &&
+			repo1.Forks == repo2.Forks &&
+			len(commits1) == len(commits2) &&
+			len(contributors1) == len(contributors2) &&
+			bus1 == bus2 &&
+			maturityScore1 == maturityScore2 {
+
+			fmt.Println("\n✅ No differences found between the two repositories.")
+			fmt.Println("Both repositories have identical metrics.")
+			return nil
+		}
+
 		table.Render()
 
 		// ---------- Verdict ----------
