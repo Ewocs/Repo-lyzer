@@ -1,9 +1,15 @@
-# Fix Keyboard Shortcuts in Dashboard Footer
+# Fix Errors in Branch
 
 ## Tasks
-- [x] Replace hardcoded footer in dashboard.go with dynamic shortcuts using FormatShortcutsCompact(GetDashboardShortcuts())
+- [x] Fix invalid Go version in go.mod (1.24.4 → 1.21)
+- [x] Fix incorrect quick access key mappings in menu.go
+  - [x] "c" (Compare): cursor 1 → 2
+  - [x] "h" (History): cursor 2 → 3
+  - [x] "s" (Settings): cursor 4 → 5
+- [x] Fix TODO for export status messages in app.go
+  - [x] Add success messages for JSON export
+  - [x] Add success messages for Markdown export
 
 ## Status
-- Analysis complete: Footer is hardcoded instead of using the shortcuts system
-- Plan approved: Use FormatShortcutsCompact(GetDashboardShortcuts()) for dynamic footer
-- Implementation complete: Footer now uses dynamic shortcuts system
+- All identified errors have been fixed
+- Branch should now build and run correctly
