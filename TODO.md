@@ -1,11 +1,7 @@
-# Implement Certificate Option
+# TODO: Fix Certificate Issues
 
-## Tasks
-- [ ] Create `internal/analyzer/certificate.go` with logic to calculate overall repository score and generate certificate data
-- [ ] Create `internal/output/certificate.go` with function to display the certificate
-- [ ] Create `cmd/certificate.go` for the new certificate command
-- [ ] Update `cmd/root.go` to register the certificate command
-- [ ] Test the certificate command with a sample repository
-
-## Status
-- Plan approved: Proceed with implementation
+## Tasks to Complete
+- [x] Create `internal/output/certificate.go` with `PrintCertificate` function that accepts `*analyzer.CertificateData` and prints human-readable certificate info using existing output styles.
+- [x] Update `GetCommits` in `internal/github/commits.go` to paginate like `GetContributors`: use `per_page=100`, loop over pages, append commits, stop when a page has fewer than `per_page` commits.
+- [x] Build the project to verify no compilation errors.
+- [x] Test the certificate command to ensure proper output.
