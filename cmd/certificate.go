@@ -44,12 +44,16 @@ The certificate also suggests potential uses for the repository.`,
 			return fmt.Errorf("failed to generate certificate: %w", err)
 		}
 
-		// Display the certificate
-		output.PrintCertificate(certificate)
+		// Generate and save PDF certificate
+		pdfPath, err := output.ExportCertificatePDF(certificate)
+		if err != nil {
+			return fmt.Errorf("failed to export certificate PDF: %w", err)
+		}
 
-		// Display analysis time
+		// Display analysis time and PDF location
 		duration := time.Since(startTime)
 		fmt.Printf("\n⏱️  Certificate generated in %.2f seconds\n", duration.Seconds())
+		fmt.Printf("📄 PDF saved to: %s\n", pdfPath)
 
 		return nil
 	},

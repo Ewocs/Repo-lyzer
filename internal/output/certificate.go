@@ -2,10 +2,16 @@ package output
 
 import (
 	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
 	"strings"
+	"time"
 
 	"github.com/agnivo988/Repo-lyzer/internal/analyzer"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/jung-kurt/gofpdf"
 )
 
 var (
@@ -83,4 +89,152 @@ func PrintCertificate(cert *analyzer.CertificateData) {
 	}
 
 	fmt.Println(strings.Repeat("=", 60))
+}
+
+// getDownloadsDir returns the user's Downloads folder
+func getDownloadsDir() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(home, "Downloads"), nil
+}
+
+// openFileManager opens the file manager to show the exported file
+func openFileManager(filePath string) error {
+	var cmd *exec.Cmd
+
+	switch runtime.GOOS {
+	case "windows":
+		// Windows: use explorer with /select to highlight the file
+		cmd = exec.Command("explorer", "/select,"+filePath)
+	case "darwin":
+		// macOS: use open with -R to reveal in Finder
+		cmd = exec.Command("open", "-R", filePath)
+	case "linux":
+		// Linux: use xdg-open on the directory
+		dir := filepath.Dir(filePath)
+		cmd = exec.Command("xdg-open", dir)
+	default:
+		return fmt.Errorf("unsupported OS: %s", runtime.GOOS)
+	}
+
+	return cmd.Start()
+}
+
+// generateFilename creates a filename with repo name and timestamp
+func generateFilename(repoName, ext string) string {
+	safeName := strings.ReplaceAll(repoName, "/", "_")
+	timestamp := time.Now().Format("2006-01-02_15-04-05")
+	return fmt.Sprintf("%s_certificate_%s.%s", safeName, timestamp, ext)
+}
+
+// ExportCertificatePDF generates a PDF certificate and saves it to Downloads
+func ExportCertificatePDF(cert *analyzer.CertificateData) (string, error) {
+	downloadsDir, err := getDownloadsDir()
+	if err != nil {
+		return "", err
+	}
+
+	filename := filepath.Join(downloadsDir, generateFilename(cert.Owner+"/"+cert.RepoName, "pdf"))
+
+	pdf := gofpdf.New("P", "mm", "A4", "")
+	pdf.AddPage()
+
+	// Title
+	pdf.SetFont("Arial", "B", 20)
+	pdf.Cell(0, 15, "Repository Certificate")
+	pdf.Ln(20)
+
+	// Repository info
+	pdf.SetFont("Arial", "B", 14)
+	pdf.Cell(0, 10, "Repository Information")
+	pdf.Ln(12)
+
+	pdf.SetFont("Arial", "", 11)
+	pdf.Cell(50, 8, "Repository:")
+	pdf.Cell(0, 8, cert.Owner+"/"+cert.RepoName)
+	pdf.Ln(6)
+	pdf.Cell(50, 8, "Description:")
+	pdf.MultiCell(0, 8, cert.Description, "", "", false)
+	pdf.Ln(6)
+	pdf.Cell(50, 8, "Stars:")
+	pdf.Cell(0, 8, fmt.Sprintf("%d", cert.Stars))
+	pdf.Ln(6)
+	pdf.Cell(50, 8, "Forks:")
+	pdf.Cell(0, 8, fmt.Sprintf("%d", cert.Forks))
+	pdf.Ln(6)
+	pdf.Cell(50, 8, "Open Issues:")
+	pdf.Cell(0, 8, fmt.Sprintf("%d", cert.OpenIssues))
+	pdf.Ln(6)
+	pdf.Cell(50, 8, "Created:")
+	pdf.Cell(0, 8, cert.CreatedAt)
+	pdf.Ln(6)
+	pdf.Cell(50, 8, "Last Updated:")
+	pdf.Cell(0, 8, cert.UpdatedAt)
+	pdf.Ln(6)
+	pdf.Cell(50, 8, "Primary Language:")
+	pdf.Cell(0, 8, fmt.Sprintf("%s (%d languages)", cert.PrimaryLanguage, cert.LanguageCount))
+	pdf.Ln(15)
+
+	// Scores & Metrics
+	pdf.SetFont("Arial", "B", 14)
+	pdf.Cell(0, 10, "Scores & Metrics")
+	pdf.Ln(12)
+
+	pdf.SetFont("Arial", "", 11)
+	pdf.Cell(50, 8, "Health Score:")
+	pdf.Cell(0, 8, fmt.Sprintf("%d/100", cert.HealthScore))
+	pdf.Ln(6)
+	pdf.Cell(50, 8, "Maturity Score:")
+	pdf.Cell(0, 8, fmt.Sprintf("%d/100 (%s)", cert.MaturityScore, cert.MaturityLevel))
+	pdf.Ln(6)
+	pdf.Cell(50, 8, "Bus Factor:")
+	pdf.Cell(0, 8, fmt.Sprintf("%d (%s)", cert.BusFactor, cert.BusRisk))
+	pdf.Ln(6)
+	pdf.Cell(50, 8, "Commits (Last Year):")
+	pdf.Cell(0, 8, fmt.Sprintf("%d (%s)", cert.CommitsLastYear, cert.ActivityLevel))
+	pdf.Ln(6)
+	pdf.Cell(50, 8, "Contributors:")
+	pdf.Cell(0, 8, fmt.Sprintf("%d", cert.Contributors))
+	pdf.Ln(15)
+
+	// Overall Assessment
+	pdf.SetFont("Arial", "B", 14)
+	pdf.Cell(0, 10, "Overall Assessment")
+	pdf.Ln(12)
+
+	pdf.SetFont("Arial", "", 11)
+	pdf.Cell(50, 8, "Overall Score:")
+	pdf.Cell(0, 8, fmt.Sprintf("%d/100", cert.OverallScore))
+	pdf.Ln(6)
+	pdf.Cell(50, 8, "Grade:")
+	pdf.Cell(0, 8, cert.Grade)
+	pdf.Ln(15)
+
+	// Potential Uses
+	pdf.SetFont("Arial", "B", 14)
+	pdf.Cell(0, 10, "Potential Uses")
+	pdf.Ln(12)
+
+	pdf.SetFont("Arial", "", 11)
+	for i, use := range cert.Uses {
+		pdf.Cell(10, 8, fmt.Sprintf("%d.", i+1))
+		pdf.MultiCell(0, 8, use, "", "", false)
+		pdf.Ln(2)
+	}
+
+	// Footer
+	pdf.Ln(10)
+	pdf.SetFont("Arial", "I", 8)
+	pdf.Cell(0, 8, fmt.Sprintf("Generated on %s", time.Now().Format("2006-01-02 15:04:05")))
+
+	err = pdf.OutputFileAndClose(filename)
+	if err != nil {
+		return "", err
+	}
+
+	_ = openFileManager(filename)
+
+	return filename, nil
 }
