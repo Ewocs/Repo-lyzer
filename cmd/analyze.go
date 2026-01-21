@@ -124,7 +124,6 @@ func runDryRun(repoArg string) error {
 	return nil
 }
 
-
 // analyzeCmd defines the "analyze" command for the CLI.
 // It analyzes a single GitHub repository and prints various metrics and reports.
 // Usage example:
@@ -138,6 +137,10 @@ var analyzeCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
+		extValues, _ := cmd.Flags().GetString("ext")
+		if extValues == "" {
+			extValues, _ = cmd.Flags().GetString("include-ext")
+		}
 
 		if dryRun {
 			return runDryRun(args[0])
@@ -182,10 +185,22 @@ var analyzeCmd = &cobra.Command{
 			}
 		}
 
-		// Fetch programming languages used in the repository
-		langs, err := client.GetLanguages(owner, repo)
-		if err != nil {
-			return fmt.Errorf("failed to get languages: %w", err)
+		// Determine whether we should restrict the analysis to a subset of file extensions
+		filter := analyzer.ParseExtensionFilter(extValues)
+		var langs map[string]int
+		if filter.IsActive() {
+			fileTree, err := client.GetFileTree(owner, repo, repoInfo.DefaultBranch)
+			if err != nil {
+				return fmt.Errorf("failed to get file tree: %w", err)
+			}
+			filteredTree := analyzer.FilterTreeEntriesByExtensions(fileTree, filter)
+			langs = analyzer.LanguageSizesFromTree(filteredTree)
+		} else {
+			// Fetch programming languages used in the repository
+			langs, err = client.GetLanguages(owner, repo)
+			if err != nil {
+				return fmt.Errorf("failed to get languages: %w", err)
+			}
 		}
 
 		// Fetch commits from the last 365 days
@@ -250,4 +265,6 @@ var analyzeCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(analyzeCmd)
 	analyzeCmd.Flags().Bool("dry-run", false, "Validate repository URL and show what metrics would be calculated without making API calls")
+	analyzeCmd.Flags().String("ext", "", "Comma-separated list of file extensions (without dot) to include in the analysis, e.g. go,md")
+	analyzeCmd.Flags().String("include-ext", "", "Alias for --ext")
 }
