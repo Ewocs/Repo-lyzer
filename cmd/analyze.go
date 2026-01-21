@@ -212,9 +212,6 @@ var analyzeCmd = &cobra.Command{
 		// Calculate repository health score
 		score := analyzer.CalculateHealth(repoInfo, commits)
 
-		// Analyze commit activity per day
-		activity := analyzer.CommitsPerDay(commits)
-
 		// Fetch contributors
 		contributors, err := client.GetContributorsWithAvatars(owner, repo, 15)
 		if err != nil {
@@ -232,6 +229,27 @@ var analyzeCmd = &cobra.Command{
 				len(contributors),
 				false, // Assuming no releases check for simplicity
 			)
+
+		// Track analysis duration
+		duration := time.Since(startTime)
+
+		if compact {
+			return output.PrintCompactJSON(output.CompactConfig{
+				Repo:            repoInfo,
+				HealthScore:     score,
+				BusFactor:       busFactor,
+				BusRisk:         busRisk,
+				MaturityScore:   maturityScore,
+				MaturityLevel:   maturityLevel,
+				CommitsLastYear: len(commits),
+				Contributors:    len(contributors),
+				Duration:        duration,
+				Languages:       langs,
+			})
+		}
+
+		// Analyze commit activity per day
+		activity := analyzer.CommitsPerDay(commits)
 
 		// Build recruiter summary
 		summary := analyzer.BuildRecruiterSummary(
@@ -255,7 +273,6 @@ var analyzeCmd = &cobra.Command{
 		output.PrintRecruiterSummary(summary)
 
 		// Display analysis time
-		duration := time.Since(startTime)
 		fmt.Printf("\n⏱️  Analysis completed in %.2f seconds\n", duration.Seconds())
 
 		return nil
