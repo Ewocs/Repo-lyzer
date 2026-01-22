@@ -1,7 +1,7 @@
-# TODO: Fix Certificate Issues
+# TODO: Fix Compilation Errors in internal/output/certificate.go
 
-## Tasks to Complete
-- [x] Create `internal/output/certificate.go` with `PrintCertificate` function that accepts `*analyzer.CertificateData` and prints human-readable certificate info using existing output styles.
-- [x] Update `GetCommits` in `internal/github/commits.go` to paginate like `GetContributors`: use `per_page=100`, loop over pages, append commits, stop when a page has fewer than `per_page` commits.
-- [x] Build the project to verify no compilation errors.
-- [x] Test the certificate command to ensure proper output.
+- [x] Update fmt.Printf for Stars (line ~49): Change "%s: %d\n" to "%s: %s\n"
+- [x] Update fmt.Printf for Forks (line ~50): Change "%s: %d\n" to "%s: %s\n"
+- [x] Update fmt.Printf for Open Issues (line ~51): Change "%s: %d\n" to "%s: %s\n"
+- [x] Update fmt.Printf for Commits (Last Year) (line ~61): Change "%s: %d (%s)\n" to "%s: %s (%s)\n"
+- [x] Update fmt.Printf for Contributors (line ~62): Change "%s: %d\n" to "%s: %s\n"

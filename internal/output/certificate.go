@@ -52,9 +52,9 @@ func PrintCertificate(cert *analyzer.CertificateData) {
 	// Repository Information
 	fmt.Println(certSectionStyle.Render("📋 Repository Information"))
 	fmt.Printf("%s: %s\n", certKeyStyle.Render("Description"), certValueStyle.Render(cert.Description))
-	fmt.Printf("%s: %d\n", certKeyStyle.Render("Stars"), certValueStyle.Render(fmt.Sprintf("%d", cert.Stars)))
-	fmt.Printf("%s: %d\n", certKeyStyle.Render("Forks"), certValueStyle.Render(fmt.Sprintf("%d", cert.Forks)))
-	fmt.Printf("%s: %d\n", certKeyStyle.Render("Open Issues"), certValueStyle.Render(fmt.Sprintf("%d", cert.OpenIssues)))
+	fmt.Printf("%s: %s\n", certKeyStyle.Render("Stars"), certValueStyle.Render(fmt.Sprintf("%d", cert.Stars)))
+	fmt.Printf("%s: %s\n", certKeyStyle.Render("Forks"), certValueStyle.Render(fmt.Sprintf("%d", cert.Forks)))
+	fmt.Printf("%s: %s\n", certKeyStyle.Render("Open Issues"), certValueStyle.Render(fmt.Sprintf("%d", cert.OpenIssues)))
 	fmt.Printf("%s: %s\n", certKeyStyle.Render("Created"), certValueStyle.Render(cert.CreatedAt))
 	fmt.Printf("%s: %s\n", certKeyStyle.Render("Last Updated"), certValueStyle.Render(cert.UpdatedAt))
 	fmt.Printf("%s: %s (%d languages)\n", certKeyStyle.Render("Primary Language"), certValueStyle.Render(cert.PrimaryLanguage), cert.LanguageCount)
@@ -64,8 +64,8 @@ func PrintCertificate(cert *analyzer.CertificateData) {
 	fmt.Printf("%s: %s/100\n", certKeyStyle.Render("Health Score"), scoreStyle.Render(fmt.Sprintf("%d", cert.HealthScore)))
 	fmt.Printf("%s: %s/100 (%s)\n", certKeyStyle.Render("Maturity Score"), scoreStyle.Render(fmt.Sprintf("%d", cert.MaturityScore)), certValueStyle.Render(cert.MaturityLevel))
 	fmt.Printf("%s: %s (%s)\n", certKeyStyle.Render("Bus Factor"), scoreStyle.Render(fmt.Sprintf("%d", cert.BusFactor)), certValueStyle.Render(cert.BusRisk))
-	fmt.Printf("%s: %d (%s)\n", certKeyStyle.Render("Commits (Last Year)"), certValueStyle.Render(fmt.Sprintf("%d", cert.CommitsLastYear)), certValueStyle.Render(cert.ActivityLevel))
-	fmt.Printf("%s: %d\n", certKeyStyle.Render("Contributors"), certValueStyle.Render(fmt.Sprintf("%d", cert.Contributors)))
+	fmt.Printf("%s: %s (%s)\n", certKeyStyle.Render("Commits (Last Year)"), certValueStyle.Render(fmt.Sprintf("%d", cert.CommitsLastYear)), certValueStyle.Render(cert.ActivityLevel))
+	fmt.Printf("%s: %s\n", certKeyStyle.Render("Contributors"), certValueStyle.Render(fmt.Sprintf("%d", cert.Contributors)))
 
 	// Overall Assessment
 	fmt.Println(certSectionStyle.Render("🎯 Overall Assessment"))
