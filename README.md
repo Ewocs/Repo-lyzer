@@ -50,6 +50,7 @@ It is designed for **developers, recruiters, and open-source enthusiasts** to qu
 - **Bus Factor** – Measures critical contributors to assess project risk  
 - **Repo Maturity Score** – Evaluates age, activity, and structure  
 - **Recruiter Summary** – Quick snapshot for hiring evaluation  
+- **Quick Summary** – Fast 5-line overview with key metrics (commits 30d, top language, contributors, health, last commit)  
 - **File Tree Viewer** – Browse repository structure in-dashboard  
 - **Export Options** – Export analysis as JSON, Markdown, CSV, or HTML  
 - **Compare Mode** – Side-by-side repository comparison  
@@ -187,6 +188,26 @@ go run main.go
 ---
 
 ## Usage
+
+### Quick Summary (Fast Overview)
+Get a quick 5-line summary of any repository:
+```bash
+repo-lyzer summary golang/go
+```
+Or use the flag with analyze:
+```bash
+repo-lyzer analyze --summary microsoft/vscode
+```
+
+**Example Output:**
+```
+📊 Repository Summary: golang/go
+   Commits (30d): 30
+   Top Language: Go
+   Contributors: 381
+   Health Score: 90/100
+   Last Commit: 4 hours ago
+```
 
 ### Analyze Repository
 ```bash
