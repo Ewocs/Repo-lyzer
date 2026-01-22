@@ -1,6 +1,9 @@
 package github
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 type Commit struct {
 	SHA    string `json:"sha"`
@@ -12,10 +15,33 @@ type Commit struct {
 }
 
 func (c *Client) GetCommits(owner, repo string, days int) ([]Commit, error) {
-	var commits []Commit
+	var allCommits []Commit
 	since := time.Now().AddDate(0, 0, -days).Format(time.RFC3339)
 
-	url := "https://api.github.com/repos/" + owner + "/" + repo + "/commits?since=" + since
-	err := c.get(url, &commits)
-	return commits, err
+	page := 1
+	perPage := 100
+
+	for {
+		url := fmt.Sprintf(
+			"https://api.github.com/repos/%s/%s/commits?since=%s&per_page=%d&page=%d",
+			owner, repo, since, perPage, page,
+		)
+
+		var commits []Commit
+		err := c.get(url, &commits)
+		if err != nil {
+			return nil, err
+		}
+
+		// Stop when no more commits or fewer than per_page
+		if len(commits) == 0 || len(commits) < perPage {
+			allCommits = append(allCommits, commits...)
+			break
+		}
+
+		allCommits = append(allCommits, commits...)
+		page++
+	}
+
+	return allCommits, nil
 }

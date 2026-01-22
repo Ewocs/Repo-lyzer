@@ -1,10 +1,7 @@
-# Fix Issues in Specified Files
+# TODO: Fix Compilation Errors in internal/output/certificate.go
 
-## Tasks
-- [x] Fix equality check in cmd/compare.go: Replace busFactor1 == busFactor2 with bus1 == bus2
-- [x] Update 404 error message in internal/github/client.go
-- [x] Fix duplicate "s" in switch case and add hint variable in internal/ui/menu.go
-- [x] Simplify UI in TODO.md
-
-## Status
-- Plan approved: Proceed with implementation
+- [x] Update fmt.Printf for Stars (line ~49): Change "%s: %d\n" to "%s: %s\n"
+- [x] Update fmt.Printf for Forks (line ~50): Change "%s: %d\n" to "%s: %s\n"
+- [x] Update fmt.Printf for Open Issues (line ~51): Change "%s: %d\n" to "%s: %s\n"
+- [x] Update fmt.Printf for Commits (Last Year) (line ~61): Change "%s: %d (%s)\n" to "%s: %s (%s)\n"
+- [x] Update fmt.Printf for Contributors (line ~62): Change "%s: %d\n" to "%s: %s\n"
